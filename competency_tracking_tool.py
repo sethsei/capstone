@@ -46,15 +46,20 @@ def import_data():
 
 def create_database():
     global database
+    database = 'test.db'
+
+    if path.isfile(database):
+        return
+    
     global connection
     global cursor
-    database = ''
     connection = sqlite3.connect(database)
     cursor = connection.cursor()
-
+    
     with open('create_tables.txt', 'r') as f:
-        cursor.executescript(f.read())
+        queries = f.read()
 
+    cursor.executescript(queries)
     connection.commit()
 
 
@@ -67,7 +72,6 @@ def main():
 
 
 if __name__ == '__main__':
-    if not path.isfile(database):
-        create_database()
-    
+    create_database()
+
     main()
