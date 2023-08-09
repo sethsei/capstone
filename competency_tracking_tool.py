@@ -13,6 +13,9 @@ class User():
         global database
         global connection
         global cursor
+        database = 'test.db'
+        connection = sqlite3.connect(database)
+        cursor = connection.cursor()
 
         self.user_id = self._get_user_id() if user_id == 0 else user_id
         self.first_name = first_name
@@ -63,7 +66,7 @@ class User():
 
                 wait_for_keypress()
                 clear()
-                return hashed
+                return hashed.decode()
 
             else:
                 cprint('\n\nPasswords do not match. Try again.', 'red')
