@@ -1,0 +1,6 @@
+Add User:
+INSERT INTO Users (first_name, last_name, phone, email, password, date_created, hire_date, user_type)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?);
+
+
+___END___
