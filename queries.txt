@@ -2,5 +2,25 @@ Add User:
 INSERT INTO Users (first_name, last_name, phone, email, password, date_created, hire_date, user_type)
 VALUES(?, ?, ?, ?, ?, ?, ?, ?);
 
+Change Password:
+UPDATE Users
+SET password=?
+WHERE user_id=?;
+
+Change Email:
+UPDATE Users
+SET email=?
+WHERE user_id=?;
+
+View Users:
+SELECT *
+FROM Users
+ORDER BY active DESC;
+
+Get User:
+SELECT *
+FROM Users
+WHERE user_id=?;
+
 
 ___END___
