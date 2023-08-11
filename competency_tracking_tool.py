@@ -384,6 +384,7 @@ def login():
             wait_for_keypress()
 
 
+
 def main():
     while True:
         clear()
@@ -397,6 +398,7 @@ def main():
 
         if user_input == 'L':
             login()
+
         
         else:
             cprint('\n\nInvalid input. Try again.', 'red')
