@@ -1,6 +1,4 @@
-import sqlite3
-import bcrypt
-import csv
+import sqlite3, bcrypt, getch, csv, sys
 from datetime import date
 from os import system, path
 from termcolor import cprint, colored
@@ -48,15 +46,8 @@ class User():
     def _create_password(self):
         while True:
             clear()
-            print('\n\nInput Password:    ', end='')
-            pw = input()
-            clear()
-            print(f'\n\nInput Password:    {"*"*len(pw)}')
-
-            print('\nConfirm Password:  ', end='')
-            confirm = input()
-            clear()
-            print(f'\n\nInput Password:    {"*"*len(pw)}\n\nConfirm Password:  {"*"*len(confirm)}')
+            pw = getpass('\n\nInput Password:  ')
+            confirm = getpass('\n\nConfirm Password:  ')
 
             pw = pw.encode()
             confirm = confirm.encode()
@@ -354,11 +345,52 @@ def create_database():
 
 
 def print_main_menu():
-    pass
+    cprint(f'\n\n{"Menu":^16}', 'white', attrs=['bold'])
+    print('-'*16)
+    print('  (L)og In')
+    cprint('  (Q)uit\n\n', 'red')
+
+
+def getpass(prompt):
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    password = ''
+    while True:
+        c = getch.getch()
+        if c == '\n':
+            sys.stdout.write('\n')
+            sys.stdout.flush()
+            return password
+        password += c
+        sys.stdout.write('*')
+        sys.stdout.flush()
+
+
+def log_in():
+    print(f'\n\nEnter your username:  ', end='')
+    username = input()
+
+    password = getpass('\n\nEnter your password:  ')
 
 
 def main():
-    pass
+    while True:
+        clear()
+        print_main_menu()
+        user_input = input().upper()
+        clear()
+
+        if user_input == 'Q':
+            cprint('\n\nGoodbye\n\n', 'light_cyan', attrs=['bold'])
+            break
+
+        if user_input == 'L':
+            log_in()
+            wait_for_keypress()
+        
+        else:
+            cprint('\n\nInvalid input. Try again.', 'red')
+            continue
 
 
 if __name__ == '__main__':
