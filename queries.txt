@@ -22,5 +22,15 @@ SELECT *
 FROM Users
 WHERE user_id=?;
 
+Login:
+SELECT user_id
+FROM Users
+WHERE email=?;
+
+Update Status:
+UPDATE Users
+SET active=1
+WHERE user_id=?;
+
 
 ___END___

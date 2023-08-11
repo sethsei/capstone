@@ -87,45 +87,29 @@ class User():
 
     def change_password(self):
         clear()
-        print('\n\nInput Old Password:    ', end='')
-        pw = input()
-        clear()
-        print(f'\n\nInput Old Password:    {"*"*len(pw)}')
+        pw = getpass('\n\nInput Old Password:  ').encode()
 
-        pw = pw.encode()
         if not bcrypt.checkpw(pw, self.password.encode()):
             cprint('\n\nIncorrect Password\n\n', 'red')
             wait_for_keypress()
             clear()
             return
 
-        pw = pw.decode()
-
         while True:
             clear()
-            print('\n\nInput New Password:    ', end='')
-            new_password = input()
-            clear()
-            print(f'\n\nInput New Password:    {"*"*len(new_password)}')
+            new_password = getpass('\n\nInput New Password:  ').encode()
+            confirm_new_password = getpass('\nConfirm New Password:  ').encode()
 
-            print('\nConfirm New Password:  ', end='')
-            confirm_new_password = input()
-            clear()
-            print(f'\n\nInput New Password:    {"*"*len(new_password)}')
-            print(f'\nConfirm New Password:  {"*"*len(confirm_new_password)}')
-
-            new_password = new_password.encode()
-            confirm_new_password = confirm_new_password.encode()
             if new_password == confirm_new_password:
                 salt = bcrypt.gensalt()
                 hashed = bcrypt.hashpw(new_password, salt)
                 
-                self.password = hashed
+                self.password = hashed.decode()
 
                 cprint('\n\n--- Password Changed ---', 'light_green', attrs=['bold'])
                 wait_for_keypress()
                 clear()
-                self._update_database('Password', self.password.decode())
+                self._update_database('Password', self.password)
                 return
 
             else:
@@ -366,11 +350,38 @@ def getpass(prompt):
         sys.stdout.flush()
 
 
-def log_in():
+def login():
     print(f'\n\nEnter your username:  ', end='')
     username = input()
 
-    password = getpass('\n\nEnter your password:  ')
+    query = find_query('Login')
+    row = cursor.execute(query, (username,)).fetchone()
+
+    if not row:
+        cprint('\n\nCould not find user.', 'red')
+        wait_for_keypress()
+        return
+    
+    else:
+        query = find_query('Get User')
+        row = cursor.execute(query, (row[0],)).fetchone()
+
+        password = getpass('\n\nEnter your password:  ').encode()
+        if not bcrypt.checkpw(password, row[5].encode()):
+            cprint('\n\nIncorrect password.', 'red')
+            wait_for_keypress()
+            return
+        
+        else:
+            global current_user
+            current_user = User(row[1], row[2], row[3], row[4], row[8], user_id=row[0], password=row[5], user_type=row[9])
+
+            query = find_query('Update Status')
+            cursor.execute(query, (row[0],))
+            connection.commit()
+            
+            cprint('\n\nSuccessfully logged in.', 'light_green', attrs=['bold'])
+            wait_for_keypress()
 
 
 def main():
@@ -385,8 +396,7 @@ def main():
             break
 
         if user_input == 'L':
-            log_in()
-            wait_for_keypress()
+            login()
         
         else:
             cprint('\n\nInvalid input. Try again.', 'red')
