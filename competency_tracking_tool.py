@@ -364,18 +364,6 @@ def get_today():
     return '/'.join(today)
 
 
-def export_data():
-    # comptetency reports
-    # single user competency
-    # export as csv and pdf
-    pass
-
-
-def import_data():
-    # assessment results
-    pass
-
-
 def find_query(title):
     found = False
     query = ''''''
@@ -401,38 +389,6 @@ def find_query(title):
                 continue
     
     return query
-
-
-def view_users():
-    query = find_query('View Users')
-
-    while True:
-        rows = cursor.execute(query).fetchall()
-        
-        clear()
-        cprint(f'\n\n{"User Records":^170}', 'light_grey', attrs=['bold'])
-        print('-'*170)
-        cprint(f'\n{"ID":5}{"First Name":18}{"Last Name":18}{"Phone":17}{"Email":33}{"Password":11}{"Status":6}{"Date Created":15}{"Hire Date":15}{"User Type":12}', 'light_grey', attrs=['bold'])
-        print(f'{"-"*2:5}{"-"*15:18}{"-"*15:18}{"-"*14:17}{"-"*30:33}{"-"*8:11}{"-"*6:9}{"-"*12:15}{"-"*12:15}{"-"*9:12}')
-        for row in rows:
-            if len(str(row[3])) == 10:
-                phone_num = list(str(row[3]))
-                phone_num.insert(0, '(')
-                phone_num.insert(4, ') ')
-                phone_num.insert(8, '-')
-                phone_num = ''.join(phone_num)
-        
-            else:
-                phone_num = row[3]
-            
-            print(f'{row[0]:>2}   {row[1]:18}{row[2]:18}{phone_num:<17}{row[4]:33}{"*"*8:11}{row[6]:6}   {row[7]:15}{row[8]:15}{row[9]:12}')
-        
-        e = get_user()
-        if e == 'EXIT':
-            return
-        
-        else:
-            continue
 
 
 def get_user():
@@ -526,6 +482,74 @@ def getpass(prompt):
         sys.stdout.flush()
 
 
+def view_users(self):
+    query = find_query('View Users')
+
+    while True:
+        rows = cursor.execute(query).fetchall()
+        
+        clear()
+        cprint(f'\n\n{"User Records":^170}', 'light_grey', attrs=['bold'])
+        print('-'*170)
+        cprint(f'\n{"ID":5}{"First Name":18}{"Last Name":18}{"Phone":17}{"Email":33}{"Password":11}{"Status":6}{"Date Created":15}{"Hire Date":15}{"User Type":12}', 'light_grey', attrs=['bold'])
+        print(f'{"-"*2:5}{"-"*15:18}{"-"*15:18}{"-"*14:17}{"-"*30:33}{"-"*8:11}{"-"*6:9}{"-"*12:15}{"-"*12:15}{"-"*9:12}')
+        for row in rows:
+            if len(str(row[3])) == 10:
+                phone_num = list(str(row[3]))
+                phone_num.insert(0, '(')
+                phone_num.insert(4, ') ')
+                phone_num.insert(8, '-')
+                phone_num = ''.join(phone_num)
+        
+            else:
+                phone_num = row[3]
+            
+            print(f'{row[0]:>2}   {row[1]:18}{row[2]:18}{phone_num:<17}{row[4]:33}{"*"*8:11}{row[6]:6}   {row[7]:15}{row[8]:15}{row[9]:12}')
+        
+        e = get_user()
+        if e == 'EXIT':
+            return
+        
+        else:
+            continue
+
+
+def view_reports(self):
+    pass
+
+
+def view_competency(self):
+    pass
+
+
+def view_assessments(self):
+    pass
+
+
+def add_user(self):
+    pass
+
+
+def edit_user(self):
+    pass
+
+
+def delete_assessment_result(self):
+    pass
+
+
+def import_data(self):
+    # assessment results
+    pass
+
+
+def export_data(self):
+    # comptetency reports
+    # single user competency
+    # export as csv and pdf
+    pass
+
+
 def login():
     print(f'\n\nEnter your username:  ', end='')
     username = input()
@@ -560,7 +584,12 @@ def login():
             cprint(f'\n{"Welcome " + current_user.first_name:^30}', 'light_cyan', attrs=['bold'])
             wait_for_keypress()
 
-            user_menu()
+            if current_user.user_type == 0:
+                user_menu()
+
+            else:
+                manager_menu()
+
             return
 
 
@@ -575,9 +604,18 @@ def print_user_menu():
     clear()
     cprint(f'\n\n{"User Menu":^26}', 'white', attrs=['bold'])
     print('-'*26)
-    print('  (U)ser Info')
+    print('  (M)y Information')
     print('  (A)ssessment History')
     print('  (C)ompetencies')
+    cprint('  (L)og Out\n\n', 'red')
+
+
+def print_manager_menu():
+    clear()
+    cprint(f'\n\n{"Manager Menu":^26}', 'white', attrs=['bold'])
+    print('-'*26)
+    print('  (M)y Information')
+    print('  (V)iew Users')
     cprint('  (L)og Out\n\n', 'red')
 
 
@@ -585,7 +623,7 @@ def user_menu():
     global current_user
     while True:
         print_user_menu()
-        inputs = {'U': current_user.print_info,
+        inputs = {'M': current_user.print_info,
                   'A': 'assessment history',
                   'C': 'competencies'}
         
@@ -607,6 +645,30 @@ def user_menu():
             continue
 
 
+def manager_menu():
+    global current_user
+    while True:
+        print_manager_menu()
+        inputs = {'M': current_user.print_info,
+                  'V': 'view users'}
+        
+        user_input = input().upper()
+        clear()
+
+        if user_input == 'L':
+            query = find_query('Update Status')
+            cursor.execute(query, (0, current_user.user_id))
+            connection.commit()
+            return
+        
+        if user_input in inputs.keys():
+            inputs[user_input]()
+        
+        else:
+            cprint('\n\nInvalid input. Try again.', 'red')
+            wait_for_keypress()
+            continue
+        
 
 def main():
     while True:
