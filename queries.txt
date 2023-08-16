@@ -27,10 +27,20 @@ UPDATE Users
 SET password=?
 WHERE user_id=?;
 
+Change Hire Date:
+UPDATE Users
+SET hire_date=?
+WHERE user_id=?;
+
+Promote:
+UPDATE Users
+SET user_type=1
+WHERE user_id=?;
+
 View Users:
 SELECT *
 FROM Users
-ORDER BY active DESC;
+ORDER BY user_type ASC;
 
 Get User:
 SELECT *
