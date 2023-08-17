@@ -1,13 +1,12 @@
-import sqlite3, bcrypt, getch, csv, sys, curses
+import sqlite3, bcrypt, getch, csv, sys
 from datetime import date
 from os import system, path
 from termcolor import cprint, colored
-from curses import wrapper
 
 
 class User():
-    # can view their own data but no one else's
-    # can change certain elements of their data, such as name, password, or email
+    # can view their assessment results
+    # can view their competencies
     def __init__(self, first_name, last_name, phone, email, hire_date, user_id=0, password=None, user_type=0):
         global database
         global connection
@@ -425,7 +424,6 @@ class User():
 
 
 class Manager(User):
-    # can view all users
     # search for users by first or last name
     # view reports of users grouped by competency
     # view comptency of individual user
@@ -684,12 +682,40 @@ def view_reports():
     pass
 
 
-def view_competency():
-    pass
-
-
 def view_assessments():
-    pass
+    query = find_query('View Assessments')
+
+    while True:
+        rows = cursor.execute(query).fetchall()
+        
+        clear()
+        cprint(f'\n\n{"Assessments":^42}', 'light_grey', attrs=['bold'])
+        print('-'*42)
+        cprint(f'\n{"ID":5}{"Name":25}{"Date Created":12}', 'light_grey', attrs=['bold'])
+        print(f'{"-"*2:5}{"-"*22:25}{"-"*12:12}')
+        for row in rows:
+            print(f'{row[0]:>2}   {row[1]:25}{row[2]:12}')
+        
+        wait_for_keypress()
+        return
+        
+
+def view_competencies():
+    query = find_query('View Competencies')
+
+    while True:
+        rows = cursor.execute(query).fetchall()
+        
+        clear()
+        cprint(f'\n\n{"Competencies":^42}', 'light_grey', attrs=['bold'])
+        print('-'*42)
+        cprint(f'\n{"ID":5}{"Name":25}{"Date Created":12}', 'light_grey', attrs=['bold'])
+        print(f'{"-"*2:5}{"-"*22:25}{"-"*12:12}')
+        for row in rows:
+            print(f'{row[0]:>2}   {row[1]:25}{row[2]:12}')
+
+        wait_for_keypress()
+        return
 
 
 def add_user():
@@ -722,12 +748,39 @@ def add_user():
     if hire_date != 'N/A':
         hire_date = hire_date.zfill(10)
 
-
     pw = '1234'.encode()
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(pw, salt).decode()
 
     return User(first_name, last_name, phone, email, hire_date, password=hashed)
+
+
+def add_assessment():
+    n = colored('Name', 'light_yellow', attrs=['bold'])
+    print(f'\n\nPlease input the {n} of the assessment:{" "*3}', end='')
+    name = input().capitalize()
+
+    query = find_query('Add Assessment')
+    cursor.execute(query, (name, get_today()))
+    connection.commit()
+
+    cprint('\n\n--- Assessment Added ---', 'light_green', attrs=['bold'])
+    wait_for_keypress()
+    return
+
+
+def add_competency():
+    n = colored('Name', 'light_yellow', attrs=['bold'])
+    print(f'\n\nPlease input the {n} of the competency:{" "*3}', end='')
+    name = input().capitalize()
+
+    query = find_query('Add Competency')
+    cursor.execute(query, (name, get_today()))
+    connection.commit()
+
+    cprint('\n\n--- Competency Added ---', 'light_green', attrs=['bold'])
+    wait_for_keypress()
+    return
 
 
 def edit_user():
@@ -836,9 +889,9 @@ def print_creation_menu():
     cprint(f'\n\n{"Creation Menu":^26}', 'white', attrs=['bold'])
     print('-'*26)
     print('  (U)ser')
-    print('  (C)ompetency')
     print('  (A)ssessment')
     print('  (AS)sessment Result')
+    print('  (C)ompetency')
     cprint('  (M)ain Menu', 'light_blue')
     cprint('  (L)og out\n\n', 'red')
 
@@ -848,9 +901,9 @@ def print_edit_menu():
     cprint(f'\n\n{"Edit Menu":^26}', 'white', attrs=['bold'])
     print('-'*26)
     print('  (U)ser')
-    print('  (C)ompetency')
     print('  (A)ssessment')
     print('  (AS)sessment Result')
+    print('  (C)ompetency')
     cprint('  (M)ain Menu', 'light_blue')
     cprint('  (L)og Out\n\n', 'red')
 
@@ -916,9 +969,9 @@ def creation_menu():
     while True:
         print_creation_menu()
         inputs = {'U': add_user,
-                  'C': 'add competency',
-                  'A': 'add assessment',
-                  'AS': 'add assessment result'}
+                  'A': add_assessment,
+                  'AS': 'add assessment result',
+                  'C': add_competency}
         
         user_input = input().upper()
         clear()
@@ -946,9 +999,9 @@ def edit_menu():
     while True:
         print_edit_menu()
         inputs = {'U': view_users,
-                  'C': view_competency,
                   'A': view_assessments,
-                  'AS': 'view assessment results'}
+                  'AS': 'view assessment results',
+                  'C': view_competencies}
         
         user_input = input().upper()
         clear()
@@ -971,7 +1024,7 @@ def edit_menu():
             continue
 
 
-def main():
+def main_menu():
     while True:
         clear()
         print_main_menu()
@@ -998,4 +1051,4 @@ if __name__ == '__main__':
     connection = sqlite3.connect(database)
     cursor = connection.cursor()
 
-    main()
+    main_menu()

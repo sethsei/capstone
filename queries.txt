@@ -2,6 +2,14 @@ Add User:
 INSERT INTO Users (first_name, last_name, phone, email, password, date_created, hire_date, user_type)
 VALUES(?, ?, ?, ?, ?, ?, ?, ?);
 
+Add Assessment:
+INSERT INTO Assessments (name, date_created)
+VALUES(?, ?);
+
+Add Competency:
+INSERT INTO Competencies (name, date_created)
+VALUES(?, ?);
+
 Change First Name:
 UPDATE Users
 SET first_name=?
@@ -24,7 +32,7 @@ WHERE user_id=?;
 
 Change Password:
 UPDATE Users
-SET password=?
+SET password=?  
 WHERE user_id=?;
 
 Change Hire Date:
@@ -41,6 +49,14 @@ View Users:
 SELECT *
 FROM Users
 ORDER BY user_type ASC;
+
+View Assessments:
+SELECT *
+FROM Assessments;
+
+View Competencies:
+SELECT *
+FROM Competencies;
 
 Get User:
 SELECT *
