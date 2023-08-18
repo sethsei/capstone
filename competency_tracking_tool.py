@@ -26,6 +26,7 @@ class User():
         self.user_type = user_type
 
         self._add_to_database()
+        self._update_user_competencies()
 
 
     def _get_user_id(self):
@@ -52,7 +53,7 @@ class User():
                 wait_for_keypress()
                 continue
 
-            confirm = getpass('\n\nConfirm Password:  ').encode()
+            confirm = getpass('\nConfirm Password:  ').encode()
             if pw == confirm:
                 salt = bcrypt.gensalt()
                 hashed = bcrypt.hashpw(pw, salt)
@@ -97,6 +98,10 @@ class User():
         print('    (PA)ssword')
         print(f'\n{"-"*70}\nIf the value you would like to change is not listed above,\nplease contact your administrator to rectify the information.\n{"-"*70}\n\n')
 
+
+    def _update_user_competencies(self):
+        pass
+    
 
     def change_values(self):
         global current_user
@@ -428,8 +433,7 @@ class Manager(User):
     # view reports of users grouped by competency
     # view comptency of individual user
     # view assessments for a user
-    # add: user, competency, assessment to competency, assessment result
-    # edit: user info, competency, assessment, assessment result
+    # edit: competency, assessment, assessment result
     # delete: assessment result
     def __init__(self, first_name, last_name, phone, email, hire_date, user_id=0, password=None):
         super().__init__(first_name, last_name, phone, email, hire_date, user_id, password, user_type=1)
@@ -600,6 +604,68 @@ def get_user():
         return
 
 
+def get_competency():
+    cid = colored('Competency ID', 'white', attrs=['bold'])
+    e = colored('EXIT', 'light_blue', attrs=['bold'])
+    print(f'\n\nEnter the {cid} to see more details,\nor type <{e}> to return to the main menu:    ', end='')
+    user_input = input().upper()
+    clear()
+
+    if user_input == 'EXIT':
+        return 'EXIT'
+    
+    elif not user_input.isnumeric(): 
+        cprint('\n\nInvalid input. Try again.', 'red')
+        wait_for_keypress()
+        return
+    
+    else:
+        query = find_query('Get Competency')
+        values = (user_input,)
+
+        row = cursor.execute(query, values).fetchone()
+
+        if not row:
+            cprint('\n\nNo user with this ID exists.', 'red')
+            wait_for_keypress()
+            return
+        
+        if not row[3]:
+            assessment = 'N/A'
+
+        else:
+            assessment = cursor.execute(f'SELECT name FROM Assessments WHERE assessment_id={row[3]};').fetchone()
+
+        cid = colored(f'{"Competency ID:":20}', 'white', attrs=['bold'])
+        n = colored(f'{"Name:":20}', 'white', attrs=['bold'])
+        dc = colored(f'{"Date Created:":20}', 'white', attrs=['bold'])
+        aa = colored(f'{"Assigned Assessment:":20}', 'white', attrs=['bold'])
+
+        cprint(f'\n\n{"Competency Information":^70}', 'white', attrs=['bold'])
+        cprint('-'*70, 'light_grey')
+        cprint(f'{cid}{row[0]:>50}')
+        cprint(f'{n}{row[1]:>50}')
+        cprint(f'{dc}{row[2]:>50}')
+        cprint(f'{aa}{assessment[0]:>50}')
+
+    e = colored('EXIT', 'light_blue', attrs=['bold'])
+    print(f'\n\n\n{"-"*70}\nIf you would like to change a detail please select an option below,\nor type <{e}> to return to the menu\n{"-"*70}\n')
+    print('    (A)ssessment ID\n\n')
+    user_input = input().upper()
+    clear()
+
+    if user_input == 'EXIT':
+        return
+    
+    elif user_input == 'A':
+        assign_assessment(row[0])
+
+    else:
+        cprint('\n\nInvalid Input. Try again.', 'red')
+        wait_for_keypress()
+        return
+
+
 def create_database():
     global database
     database = 'test.db'
@@ -618,6 +684,8 @@ def create_database():
     cursor.executescript(queries)
     connection.commit()
 
+    x = Manager('John', 'Doe', '5555555555', 'johndoe@gmail.com', 'N/A')
+
 
 def getpass(prompt):
     sys.stdout.write(prompt)
@@ -634,7 +702,7 @@ def getpass(prompt):
         sys.stdout.flush()
 
 
-def view_users():
+def view_users(c=0):
     query = find_query('View Users')
 
     while True:
@@ -670,8 +738,10 @@ def view_users():
             
             print(f' {row[0]:>2}   {row[1]:23}{row[2]:23}{phone_num:19}{row[4]:33}{"*"*8:13}{status:13}{row[7]:15}{row[8]:15}{user_type:9}')
         
-        e = get_user()
-        if e == 'EXIT':
+        if c != 0:
+            return
+        
+        if get_user() == 'EXIT':
             return
         
         else:
@@ -682,7 +752,7 @@ def view_reports():
     pass
 
 
-def view_assessments():
+def view_assessments(c=0):
     query = find_query('View Assessments')
 
     while True:
@@ -696,8 +766,12 @@ def view_assessments():
         for row in rows:
             print(f'{row[0]:>2}   {row[1]:25}{row[2]:12}')
         
-        wait_for_keypress()
-        return
+        if c == 0:
+            wait_for_keypress()
+            return
+        
+        else:
+            return
         
 
 def view_competencies():
@@ -714,8 +788,11 @@ def view_competencies():
         for row in rows:
             print(f'{row[0]:>2}   {row[1]:25}{row[2]:12}')
 
-        wait_for_keypress()
-        return
+        if get_competency() == 'EXIT':
+            return
+        
+        else:
+            continue
 
 
 def add_user():
@@ -769,6 +846,41 @@ def add_assessment():
     return
 
 
+def add_assessment_result():
+    uid = colored('User ID', 'light_yellow', attrs=['bold'])
+    aid = colored('Assessment ID', 'light_yellow', attrs=['bold'])
+    dc = colored('Date Completed', 'white', attrs=['bold'])
+    s = colored('Score', 'light_yellow', attrs=['bold'])
+
+    view_users(1)
+
+    print(f'\n\nPlease input the {uid}:{" "*10}', end='')
+    user_id = input()
+
+    view_assessments(1)
+
+    print(f'\n\nPlease input the {uid}:{" "*10}{user_id}')
+    print(f'\n\nPlease input the {aid}:{" "*4}', end='')
+    assessment_id = input()
+    clear()
+
+    print(f'\n\nPlease input the {uid}:{" "*10}{user_id}')
+    print(f'\n\nPlease input the {aid}:{" "*4}{assessment_id}')
+    print(f'\n\nPlease input the {dc}:{" "*3}', end='')
+    date_completed = input()
+
+    print(f'\n\nPlease input the {s}:{" "*12}', end='')
+    score = input()
+
+    query = find_query('Add Assessment Result')
+    cursor.execute(query, (user_id, assessment_id, date_completed, score))
+    connection.commit()
+
+    cprint('\n\n--- Assessment Result Added ---', 'light_green', attrs=['bold'])
+    wait_for_keypress()
+    return
+
+
 def add_competency():
     n = colored('Name', 'light_yellow', attrs=['bold'])
     print(f'\n\nPlease input the {n} of the competency:{" "*3}', end='')
@@ -783,8 +895,33 @@ def add_competency():
     return
 
 
-def edit_user():
-    pass
+def assign_assessment(competency_id):
+    view_assessments(1)
+
+    aid = colored('Assessment ID', 'white', attrs=['bold'])
+    e = colored('EXIT', 'light_blue', attrs=['bold'])
+    print(f'\n\nEnter the {aid} to see more details,\nor type <{e}> to return to the main menu:    ', end='')
+    user_input = input().upper()
+    clear()
+
+    if user_input == 'EXIT':
+        return 'EXIT'
+    
+    elif not user_input.isnumeric(): 
+        cprint('\n\nInvalid input. Try again.', 'red')
+        wait_for_keypress()
+        return
+    
+    else:
+        query = find_query('Assign Assessment to Competency')
+        values = (user_input, competency_id)
+
+        cursor.execute(query, values)
+        connection.commit()
+
+    cprint('\n\n--- Assessment Assigned ---', 'light_green', attrs=['bold'])
+    wait_for_keypress()
+    return
 
 
 def delete_assessment_result():
@@ -877,8 +1014,7 @@ def print_manager_menu():
     print('-'*26)
     print('  (M)y Information')
     print('  (C)reation Menu')
-    print('  (E)dit Menu')
-    print('  (V)iew Users')
+    print('  (V)iew Menu')
     print('  (S)earch Users')
     print('  (R)eports')
     cprint('  (L)og Out\n\n', 'red')
@@ -896,14 +1032,14 @@ def print_creation_menu():
     cprint('  (L)og out\n\n', 'red')
 
 
-def print_edit_menu():
+def print_view_menu():
     clear()
-    cprint(f'\n\n{"Edit Menu":^26}', 'white', attrs=['bold'])
+    cprint(f'\n\n{"View Menu":^26}', 'white', attrs=['bold'])
     print('-'*26)
-    print('  (U)ser')
-    print('  (A)ssessment')
-    print('  (AS)sessment Result')
-    print('  (C)ompetency')
+    print('  (U)sers')
+    print('  (A)ssessments')
+    print('  (AS)sessment Results')
+    print('  (C)ompetencies')
     cprint('  (M)ain Menu', 'light_blue')
     cprint('  (L)og Out\n\n', 'red')
 
@@ -940,8 +1076,7 @@ def manager_menu():
         print_manager_menu()
         inputs = {'M': current_user.print_info,
                   'C': creation_menu,
-                  'E': edit_menu,
-                  'V': view_users,
+                  'V': view_menu,
                   'S': 'search users',
                   'R': 'reports'}
         
@@ -970,7 +1105,7 @@ def creation_menu():
         print_creation_menu()
         inputs = {'U': add_user,
                   'A': add_assessment,
-                  'AS': 'add assessment result',
+                  'AS': add_assessment_result,
                   'C': add_competency}
         
         user_input = input().upper()
@@ -994,10 +1129,10 @@ def creation_menu():
             continue
 
 
-def edit_menu():
+def view_menu():
     global current_user
     while True:
-        print_edit_menu()
+        print_view_menu()
         inputs = {'U': view_users,
                   'A': view_assessments,
                   'AS': 'view assessment results',

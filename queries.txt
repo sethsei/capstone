@@ -6,6 +6,14 @@ Add Assessment:
 INSERT INTO Assessments (name, date_created)
 VALUES(?, ?);
 
+Add Assessment Result:
+INSERT INTO Assessment_results (user_id, assessment_id, date_completed, score)
+VALUES(?, ?, ?, ?);
+
+Add User Competency:
+INSERT INTO User_competencies (user_id, assessment_id, competency_id, competency_score)
+VALUES(?, ?, ?, ?)
+
 Add Competency:
 INSERT INTO Competencies (name, date_created)
 VALUES(?, ?);
@@ -45,6 +53,11 @@ UPDATE Users
 SET user_type=1
 WHERE user_id=?;
 
+Assign Assessment to Competency:
+UPDATE Competencies
+SET assessment_id=?
+WHERE competency_id=?;
+
 View Users:
 SELECT *
 FROM Users
@@ -62,6 +75,11 @@ Get User:
 SELECT *
 FROM Users
 WHERE user_id=?;
+
+Get Competency:
+SELECT *
+FROM Competencies
+WHERE competency_id=?;
 
 Login:
 SELECT user_id
