@@ -100,7 +100,57 @@ class User():
 
 
     def _update_user_competencies(self):
-        pass
+        competencies = cursor.execute('SELECT competency_id FROM Competencies;').fetchall()
+        if not competencies:
+            return
+
+        user_competencies = cursor.execute(f'SELECT competency_id FROM User_competencies WHERE user_id={self.user_id}').fetchall()
+        if not user_competencies:
+            user_competencies.append(tuple())
+
+        for c in competencies[0]:
+            if c not in user_competencies[0]:
+                # assign non-existent scores with assessment result or 0
+                score = cursor.execute(find_query('Get Assessment Result'), (c, self.user_id)).fetchone()
+                if not score:
+                    score = 0
+
+                else:
+                    grades = {(0, 60): 1,
+                              (60, 70): 2,
+                              (70, 80): 3,
+                              (80, 90): 4,
+                              (90, 101): 5}
+                    for g in grades.keys():
+                        if score[0] in range(g[0], g[1]):
+                            score = grades[g]
+
+                cursor.execute(find_query('Assign Assessment Result'), (self.user_id, c, score))
+                connection.commit()
+
+            elif c in user_competencies[0]:
+                # update old scores
+                # something not working here
+                score = cursor.execute(find_query('Get Assessment Result'), (c, self.user_id)).fetchone()
+                if not score:
+                    continue
+
+                grades = {(0, 60): 1,
+                            (60, 70): 2,
+                            (70, 80): 3,
+                            (80, 90): 4,
+                            (90, 101): 5}
+                for g in grades.keys():
+                    if score[0] in range(g[0], g[1]):
+                        score = grades[g]
+                
+                old_score = cursor.execute(find_query('Get Old Score'), (self.user_id, c)).fetchone()
+                if score == old_score:
+                    continue
+
+                else:
+                    cursor.execute(find_query('Update Competency Score'), (score, self.user_id, c))
+                    connection.commit()
     
 
     def change_values(self):
@@ -837,8 +887,7 @@ def add_assessment():
     print(f'\n\nPlease input the {n} of the assessment:{" "*3}', end='')
     name = input().capitalize()
 
-    query = find_query('Add Assessment')
-    cursor.execute(query, (name, get_today()))
+    cursor.execute(find_query('Add Assessment'), (name, get_today()))
     connection.commit()
 
     cprint('\n\n--- Assessment Added ---', 'light_green', attrs=['bold'])
@@ -856,12 +905,21 @@ def add_assessment_result():
 
     print(f'\n\nPlease input the {uid}:{" "*10}', end='')
     user_id = input()
+    if not user_id.isnumeric():
+        cprint('\n\nInvalid input. Try again.')
+        wait_for_keypress()
+        return
 
     view_assessments(1)
 
     print(f'\n\nPlease input the {uid}:{" "*10}{user_id}')
     print(f'\n\nPlease input the {aid}:{" "*4}', end='')
     assessment_id = input()
+    if not assessment_id.isnumeric():
+        cprint('\n\nInvalid input. Try again.')
+        wait_for_keypress()
+        return
+    
     clear()
 
     print(f'\n\nPlease input the {uid}:{" "*10}{user_id}')
@@ -871,9 +929,12 @@ def add_assessment_result():
 
     print(f'\n\nPlease input the {s}:{" "*12}', end='')
     score = input()
+    if not score.isnumeric():
+        cprint('\n\nInvalid input. Try again.')
+        wait_for_keypress()
+        return
 
-    query = find_query('Add Assessment Result')
-    cursor.execute(query, (user_id, assessment_id, date_completed, score))
+    cursor.execute(find_query('Add Assessment Result'), (user_id, assessment_id, date_completed, score))
     connection.commit()
 
     cprint('\n\n--- Assessment Result Added ---', 'light_green', attrs=['bold'])
@@ -883,12 +944,29 @@ def add_assessment_result():
 
 def add_competency():
     n = colored('Name', 'light_yellow', attrs=['bold'])
-    print(f'\n\nPlease input the {n} of the competency:{" "*3}', end='')
+    print(f'\n\nPlease input the {n} of the competency:{" "*12}', end='')
     name = input().capitalize()
+    clear()
 
-    query = find_query('Add Competency')
-    cursor.execute(query, (name, get_today()))
+    cursor.execute(find_query('Add Competency'), (name, get_today()))
     connection.commit()
+
+    view_assessments(1)
+
+    print(f'\n\nPlease input the {n} of the competency:{" "*12}{name}')
+    aid = colored('Assessment ID', 'white', attrs=['bold'])
+    print(f'\n\nPlease input the {aid} (\'Enter\' to skip):{" "*3}', end='')
+    assessment_id = input().upper()
+    clear()
+
+    print(f'\n\nPlease input the {n} of the competency:{" "*12}{name}')
+
+    if assessment_id:
+        print(f'\n\nPlease input the {aid} (\'Enter\' to skip):{" "*3}{assessment_id}')
+
+        competency_id = cursor.execute(f'SELECT competency_id FROM Competencies WHERE name=\'{name}\'').fetchone()
+        cursor.execute(find_query('Assign Assessment to Competency'), (assessment_id, competency_id[0]))
+        connection.commit()
 
     cprint('\n\n--- Competency Added ---', 'light_green', attrs=['bold'])
     wait_for_keypress()
@@ -899,22 +977,18 @@ def assign_assessment(competency_id):
     view_assessments(1)
 
     aid = colored('Assessment ID', 'white', attrs=['bold'])
-    e = colored('EXIT', 'light_blue', attrs=['bold'])
-    print(f'\n\nEnter the {aid} to see more details,\nor type <{e}> to return to the main menu:    ', end='')
-    user_input = input().upper()
+    print(f'\n\nPlease input the {aid}:{" "*3}', end='')
+    assessment_id = input().upper()
     clear()
-
-    if user_input == 'EXIT':
-        return 'EXIT'
     
-    elif not user_input.isnumeric(): 
+    if not assessment_id.isnumeric(): 
         cprint('\n\nInvalid input. Try again.', 'red')
         wait_for_keypress()
         return
     
     else:
         query = find_query('Assign Assessment to Competency')
-        values = (user_input, competency_id)
+        values = (assessment_id, competency_id)
 
         cursor.execute(query, values)
         connection.commit()

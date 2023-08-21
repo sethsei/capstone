@@ -10,13 +10,13 @@ Add Assessment Result:
 INSERT INTO Assessment_results (user_id, assessment_id, date_completed, score)
 VALUES(?, ?, ?, ?);
 
-Add User Competency:
-INSERT INTO User_competencies (user_id, assessment_id, competency_id, competency_score)
-VALUES(?, ?, ?, ?)
-
 Add Competency:
 INSERT INTO Competencies (name, date_created)
 VALUES(?, ?);
+
+Add User Competency:
+INSERT INTO User_competencies (user_id, assessment_id, competency_id, competency_score)
+VALUES(?, ?, ?, ?)
 
 Change First Name:
 UPDATE Users
@@ -57,6 +57,27 @@ Assign Assessment to Competency:
 UPDATE Competencies
 SET assessment_id=?
 WHERE competency_id=?;
+
+Get Assessment Result:
+SELECT ar.score
+FROM Assessment_results AS ar
+INNER JOIN Competencies AS c
+    ON ar.assessment_id = c.assessment_id
+WHERE c.competency_id=? AND ar.user_id=?;
+
+Assign Assessment Result:
+INSERT INTO User_competencies (user_id, competency_id, competency_score)
+VALUES(?, ?, ?);
+
+Get Old Score:
+SELECT competency_score
+FROM User_competencies
+WHERE user_id=? and competency_id=?;
+
+Update Competency Score:
+UPDATE User_competencies
+SET competency_score=?
+WHERE user_id=? and competency_id=?;
 
 View Users:
 SELECT *
