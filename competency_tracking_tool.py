@@ -291,7 +291,6 @@ class User():
                 wait_for_keypress()
                 continue
 
-
     def print_info(self):
         if len(str(self.phone)) == 10:
             phone_num = list(str(self.phone))
@@ -607,7 +606,6 @@ def user_menu():
             continue
 
 
-
 def main():
     while True:
         clear()
@@ -630,6 +628,9 @@ def main():
 
 
 if __name__ == '__main__':
+    database = 'test.db'
+    connection = sqlite3.connect(database)
+    cursor = connection.cursor()
     create_database()
     database = 'test.db'
     connection = sqlite3.connect(database)
