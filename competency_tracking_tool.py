@@ -1,8 +1,7 @@
-import sqlite3, bcrypt, getch, csv, sys, curses
+import sqlite3, bcrypt, getch, csv, sys
 from datetime import date
 from os import system, path
 from termcolor import cprint, colored
-from curses import wrapper
 
 
 class User():
@@ -1256,9 +1255,6 @@ def main_menu():
 
 
 if __name__ == '__main__':
-    database = 'test.db'
-    connection = sqlite3.connect(database)
-    cursor = connection.cursor()
     create_database()
     database = 'test.db'
     connection = sqlite3.connect(database)
