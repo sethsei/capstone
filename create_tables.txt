@@ -20,15 +20,17 @@ CREATE TABLE IF NOT EXISTS Assessments (
 CREATE TABLE IF NOT EXISTS Competencies (
     competency_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
-    date_created TEXT
+    date_created TEXT,
+    assessment_id INTEGER,
+    FOREIGN KEY (assessment_id)
+        REFERENCES Assessments(assessment_id)
 );
 
 CREATE TABLE IF NOT EXISTS Assessment_results (
     user_id INTEGER,
     assessment_id INTEGER,
     date_completed TEXT,
-    competency_score INTEGER NOT NULL,
-    PRIMARY KEY (user_id, assessment_id),
+    score INTEGER NOT NULL,
     FOREIGN KEY (user_id)
         REFERENCES Users(user_id),
     FOREIGN KEY (assessment_id)
@@ -37,14 +39,10 @@ CREATE TABLE IF NOT EXISTS Assessment_results (
 
 CREATE TABLE IF NOT EXISTS User_competencies (
     user_id INTEGER,
-    assessment_id INTEGER,
     competency_id INTEGER,
     competency_score INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (user_id, assessment_id, competency_id),
     FOREIGN KEY (user_id)
         REFERENCES Users(user_id),
-    FOREIGN KEY (assessment_id)
-        REFERENCES Assessments(assessment_id),
     FOREIGN KEY (competency_id)
         REFERENCES Competencies(competency_id)
 );
