@@ -1,7 +1,8 @@
-import sqlite3, bcrypt, getch, csv, sys
+import sqlite3, bcrypt, getch, csv, sys, curses
 from datetime import date
 from os import system, path
 from termcolor import cprint, colored
+from curses import wrapper
 
 
 class User():
@@ -1013,7 +1014,7 @@ def export_data():
     # export as csv and pdf
     pass
 
-
+  
 def login():
     print(f'\n\nEnter your username:  ', end='')
     username = input()
@@ -1255,6 +1256,9 @@ def main_menu():
 
 
 if __name__ == '__main__':
+    database = 'test.db'
+    connection = sqlite3.connect(database)
+    cursor = connection.cursor()
     create_database()
     database = 'test.db'
     connection = sqlite3.connect(database)
