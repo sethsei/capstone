@@ -1,3 +1,6 @@
+
+--- ADD RECORDS ---
+
 Add User:
 INSERT INTO Users (first_name, last_name, phone, email, password, date_created, hire_date, user_type)
 VALUES(?, ?, ?, ?, ?, ?, ?, ?);
@@ -14,9 +17,11 @@ Add Competency:
 INSERT INTO Competencies (name, date_created)
 VALUES(?, ?);
 
-Add User Competency:
-INSERT INTO User_competencies (user_id, assessment_id, competency_id, competency_score)
-VALUES(?, ?, ?, ?)
+Assign Assessment Result:
+INSERT INTO User_competencies (user_id, competency_id, competency_score)
+VALUES(?, ?, ?);
+
+--- UPDATE RECORDS ---
 
 Change First Name:
 UPDATE Users
@@ -58,26 +63,12 @@ UPDATE Competencies
 SET assessment_id=?
 WHERE competency_id=?;
 
-Get Assessment Result:
-SELECT ar.score
-FROM Assessment_results AS ar
-INNER JOIN Competencies AS c
-    ON ar.assessment_id = c.assessment_id
-WHERE c.competency_id=? AND ar.user_id=?;
-
-Assign Assessment Result:
-INSERT INTO User_competencies (user_id, competency_id, competency_score)
-VALUES(?, ?, ?);
-
-Get Old Score:
-SELECT competency_score
-FROM User_competencies
-WHERE user_id=? and competency_id=?;
-
 Update Competency Score:
 UPDATE User_competencies
 SET competency_score=?
 WHERE user_id=? and competency_id=?;
+
+--- VIEW RECORDS ---
 
 View Users:
 SELECT *
@@ -92,20 +83,75 @@ View Competencies:
 SELECT *
 FROM Competencies;
 
+--- GET DATA ---
+
+Get User ID:
+SELECT user_id
+FROM Users
+ORDER BY user_id DESC;
+
 Get User:
 SELECT *
 FROM Users
-WHERE user_id=?;
+WHERE user_id=?
+LIMIT 1;
+
+Get Assessment:
+SELECT *
+FROM Assessments
+WHERE assessment_id=?
+LIMIT 1;
 
 Get Competency:
 SELECT *
 FROM Competencies
-WHERE competency_id=?;
+WHERE competency_id=?
+LIMIT 1;
+
+Get Assessment Name:
+SELECT name
+FROM Assessments
+WHERE assessment_id=?
+LIMIT 1;
+
+Get Competency ID:
+SELECT competency_id
+FROM Competencies
+WHERE name=?
+LIMIT 1;
+
+Get Competency IDs:
+SELECT competency_id
+FROM Competencies;
+
+Get User Competencies:
+SELECT competency_id
+FROM User_competencies
+WHERE user_id=?;
+
+Get Assessment Result:
+SELECT ar.score
+FROM Assessment_results AS ar
+INNER JOIN Competencies AS c
+    ON ar.assessment_id = c.assessment_id
+WHERE c.competency_id=? AND ar.user_id=?
+ORDER BY ar.score DESC
+LIMIT 1;
+
+Get Old Score:
+SELECT competency_score
+FROM User_competencies
+WHERE user_id=? and competency_id=?
+ORDER BY competency_score DESC
+LIMIT 1;
+
+--- OTHER ---
 
 Login:
 SELECT user_id
 FROM Users
-WHERE email=?;
+WHERE email=?
+LIMIT 1;
 
 Update Status:
 UPDATE Users

@@ -1,8 +1,10 @@
-import sqlite3, bcrypt, getch, csv, sys
-from datetime import date
-from os import system, path
+import sqlite3, bcrypt, csv
+import competency_tools as ct
 from termcolor import cprint, colored
+from os import path
 
+
+'''User & Manager Objects'''
 
 class User():
     # can view their assessment results
@@ -11,7 +13,7 @@ class User():
         global database
         global connection
         global cursor
-        database = 'test.db'
+        database = 'competency_tracking.db'
         connection = sqlite3.connect(database)
         cursor = connection.cursor()
 
@@ -21,7 +23,7 @@ class User():
         self.phone = phone
         self.email = email
         self.password = self._create_password() if password == None else password
-        self.date_created = get_today()
+        self.date_created = ct.get_today()
         self.hire_date = hire_date
         self.user_type = user_type
 
@@ -30,13 +32,7 @@ class User():
 
 
     def _get_user_id(self):
-        query = '''
-        SELECT user_id
-        FROM Users
-        ORDER BY user_id DESC;
-        '''
-
-        row = cursor.execute(query).fetchone()
+        row = cursor.execute(ct.find_query('Get User ID:')).fetchone()
         if row == None:
             return 1
 
@@ -46,34 +42,35 @@ class User():
 
     def _create_password(self):
         while True:
-            clear()
-            pw = getpass('\n\nInput Password:    ').encode()
+            ct.clear()
+            pw = ct.getpass('\n\nInput Password:    ')
+            plength = len(pw)
+            pw = pw.encode()
+
             if len(pw.decode()) < 8:
                 cprint('\n\nYour password must be at least 8 characters long.', 'red')
-                wait_for_keypress()
+                ct.wait_for_keypress()
                 continue
 
-            confirm = getpass('\nConfirm Password:  ').encode()
+            confirm = ct.getpass('\nConfirm Password:  ', confirm=plength).encode()
             if pw == confirm:
                 salt = bcrypt.gensalt()
                 hashed = bcrypt.hashpw(pw, salt)
 
-                wait_for_keypress()
-                clear()
+                ct.wait_for_keypress()
+                ct.clear()
                 return hashed.decode()
 
             else:
                 cprint('\n\nPasswords do not match. Try again.', 'red')
-                wait_for_keypress()
+                ct.wait_for_keypress()
                 continue
         
     
     def _add_to_database(self):
-        query = find_query('Add User')
         values = (self.first_name, self.last_name, self.phone, self.email, self.password, self.date_created, self.hire_date, self.user_type)
-        
         try:
-            cursor.execute(query, values)
+            cursor.execute(ct.find_query('Add User:'), values)
             connection.commit()
 
         except sqlite3.IntegrityError:
@@ -81,60 +78,29 @@ class User():
     
 
     def _update_database(self, name, value):
-        query = find_query(f'Change {name}')
-        values = (value, self.user_id)
-
-        cursor.execute(query, values)
+        cursor.execute(ct.find_query(f'Change {name}:'), (value, self.user_id))
         connection.commit()
 
 
     def _change_values_menu(self):
-        e = colored('EXIT', 'light_blue', attrs=['bold'])
-        print(f'\n\n\n{"-"*70}\nIf you would like to change a detail please select an option below,\nor type <{e}> to return to the menu\n{"-"*70}\n')
-        print('    (F)irst Name')
-        print('    (L)ast Name')
-        print('    (PH)one Number')
-        print('    (E)mail')
-        print('    (PA)ssword')
-        print(f'\n{"-"*70}\nIf the value you would like to change is not listed above,\nplease contact your administrator to rectify the information.\n{"-"*70}\n\n')
+        ct.u_change_values_menu()
 
 
     def _update_user_competencies(self):
-        competencies = cursor.execute('SELECT competency_id FROM Competencies;').fetchall()
+        competencies = cursor.execute(ct.find_query('Get Competency IDs:')).fetchall()
         if not competencies:
             return
 
-        user_competencies = cursor.execute(f'SELECT competency_id FROM User_competencies WHERE user_id={self.user_id}').fetchall()
+        user_competencies = cursor.execute(ct.find_query('Get User Competencies:'), (self.user_id,)).fetchall()
         if not user_competencies:
             user_competencies.append(tuple())
 
         for c in competencies[0]:
-            if c not in user_competencies[0]:
-                # assign non-existent scores with assessment result or 0
-                score = cursor.execute(find_query('Get Assessment Result'), (c, self.user_id)).fetchone()
-                if not score:
-                    score = 0
+            score = cursor.execute(ct.find_query('Get Assessment Result:'), (c, self.user_id)).fetchone()
+            if not score:
+                score = 0
 
-                else:
-                    grades = {(0, 60): 1,
-                              (60, 70): 2,
-                              (70, 80): 3,
-                              (80, 90): 4,
-                              (90, 101): 5}
-                    for g in grades.keys():
-                        if score[0] in range(g[0], g[1]):
-                            score = grades[g]
-
-                cursor.execute(find_query('Assign Assessment Result'), (self.user_id, c, score))
-                connection.commit()
-
-            elif c in user_competencies[0]:
-                # update old scores
-                # something not working here
-                score = cursor.execute(find_query('Get Assessment Result'), (c, self.user_id)).fetchone()
-                if not score:
-                    continue
-
+            else:
                 grades = {(0, 60): 1,
                             (60, 70): 2,
                             (70, 80): 3,
@@ -143,21 +109,28 @@ class User():
                 for g in grades.keys():
                     if score[0] in range(g[0], g[1]):
                         score = grades[g]
-                
-                old_score = cursor.execute(find_query('Get Old Score'), (self.user_id, c)).fetchone()
+
+            if c not in user_competencies[0]:
+                # assign non-existent scores with assessment result or 0
+                cursor.execute(ct.find_query('Assign Assessment Result:'), (self.user_id, c, score))
+                connection.commit()
+
+            elif c in user_competencies[0]:
+                # update old scores
+                # something not working here
+                old_score = cursor.execute(ct.find_query('Get Old Score:'), (self.user_id, c)).fetchone()
                 if score == old_score:
                     continue
 
                 else:
-                    cursor.execute(find_query('Update Competency Score'), (score, self.user_id, c))
+                    cursor.execute(ct.find_query('Update Competency Score:'), (score, self.user_id, c))
                     connection.commit()
     
 
     def change_values(self):
-        global current_user
         self._change_values_menu()
         user_input = input().upper()
-        clear()
+        ct.clear()
 
         inputs = {'F': self.change_first_name,
                 'L': self.change_last_name,
@@ -173,13 +146,13 @@ class User():
 
         else:
             cprint('\n\nInvalid Input. Try again.', 'red')
-            wait_for_keypress()
+            ct.wait_for_keypress()
             return
     
 
     def change_first_name(self):
         while True:
-            clear()
+            ct.clear()
             print('\n\nInput New First Name:  ', end='')
             new_first_name = input()
 
@@ -189,7 +162,7 @@ class User():
                 
                 if yn == 'Y':
                     cprint('\n\n--- Change Canceled ---', 'light_yellow', attrs=['bold'])
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     return
                 
                 elif yn == 'N':
@@ -197,20 +170,20 @@ class User():
 
                 else:
                     cprint('\n\nInvalid input. Try again.', 'red')
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     continue
             
             self.first_name = new_first_name
             self._update_database('First Name', self.first_name)
 
             cprint('\n\n--- First Name Updated ---', 'light_green', attrs=['bold'])
-            wait_for_keypress()
+            ct.wait_for_keypress()
             return
 
 
     def change_last_name(self):
         while True:
-            clear()
+            ct.clear()
             print('\n\nInput New Last Name:  ', end='')
             new_last_name = input()
 
@@ -220,7 +193,7 @@ class User():
                 
                 if yn == 'Y':
                     cprint('\n\n--- Change Canceled ---', 'light_yellow', attrs=['bold'])
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     return
                 
                 elif yn == 'N':
@@ -228,20 +201,20 @@ class User():
 
                 else:
                     cprint('\n\nInvalid input. Try again.', 'red')
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     continue
             
             self.last_name = new_last_name
             self._update_database('Last Name', self.last_name)
 
             cprint('\n\n--- Last Name Updated ---', 'light_green', attrs=['bold'])
-            wait_for_keypress()
+            ct.wait_for_keypress()
             return
 
 
     def change_phone(self):
         while True:
-            clear()
+            ct.clear()
             print('\n\nInput New Phone Number:    ', end='')
             new_phone = input()
 
@@ -251,7 +224,7 @@ class User():
                 
                 if yn == 'Y':
                     cprint('\n\n--- Change Canceled ---', 'light_yellow', attrs=['bold'])
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     return
                 
                 elif yn == 'N':
@@ -259,12 +232,12 @@ class User():
 
                 else:
                     cprint('\n\nInvalid input. Try again.', 'red')
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     continue
             
             elif new_phone.isnumeric() == False:
-                cprint('\n\nInvalid input. Must be a real phone number consisting of only digits 0-9', 'red')
-                wait_for_keypress()
+                cprint('\n\nInvalid input. Must be a real phone number consisting of only digits 0-9.\nDo not include any spaces or special characters.', 'red')
+                ct.wait_for_keypress()
                 continue
 
             else:
@@ -275,18 +248,18 @@ class User():
                     self.phone = new_phone
                     self._update_database('Phone', self.phone)
                     cprint('\n\n--- Phone Number Updated ---', 'light_green', attrs=['bold'])
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     return
                 
                 else:
                     cprint('\n\nNumbers do not match', 'red')
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     continue
 
 
     def change_email(self):
         while True:
-            clear()
+            ct.clear()
             print('\n\nInput New Email:    ', end='')
             new_email = input()
 
@@ -296,7 +269,7 @@ class User():
                 
                 if yn == 'Y':
                     cprint('\n\n--- Change Canceled ---', 'light_yellow', attrs=['bold'])
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     return
                 
                 elif yn == 'N':
@@ -304,15 +277,14 @@ class User():
 
                 else:
                     cprint('\n\nInvalid input. Try again.', 'red')
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     continue
 
-            query = find_query('Login')
-            row = cursor.execute(query, (new_email,)).fetchone()
+            row = cursor.execute(ct.find_query('Login:'), (new_email,)).fetchone()
 
             if row:
                 cprint('\n\nThis email is already in use. Please choose a different one.', 'red')
-                wait_for_keypress()
+                ct.wait_for_keypress()
                 continue
 
             else:
@@ -323,28 +295,30 @@ class User():
                     self.email = new_email
                     self._update_database('Email', self.email)
                     cprint('\n\n--- Email Updated ---', 'light_green', attrs=['bold'])
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     return
                 
                 else:
                     cprint('\n\nEmails do not match', 'red')
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     continue
     
 
     def change_password(self):
-        clear()
-        pw = getpass('\n\nInput Old Password:  ').encode()
+        ct.clear()
+        pw = ct.getpass('\n\nInput Old Password:  ').encode()
 
         if not bcrypt.checkpw(pw, self.password.encode()):
             cprint('\n\nIncorrect Password', 'red')
-            wait_for_keypress()
-            clear()
+            ct.wait_for_keypress()
+            ct.clear()
             return
 
         while True:
-            clear()
-            new_password = getpass('\n\nInput New Password:    ').encode()
+            ct.clear()
+            new_password = ct.getpass('\n\nInput New Password:    ')
+            plength = len(new_password)
+            new_password = new_password.encode()
 
             if bcrypt.checkpw(new_password, self.password.encode()):
                 print('\n\nThis is already your password. Would you like to cancel this change?  Y/N\n')
@@ -352,7 +326,7 @@ class User():
                 
                 if yn == 'Y':
                     cprint('\n\n--- Change Canceled ---', 'light_yellow', attrs=['bold'])
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     return
                 
                 elif yn == 'N':
@@ -360,37 +334,37 @@ class User():
 
                 else:
                     cprint('\n\nInvalid input. Try again.', 'red')
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     continue
             
             if len(new_password.decode()) < 8:
                 cprint('\n\nYour password must be at least 8 characters long.', 'red')
-                wait_for_keypress()
+                ct.wait_for_keypress()
                 continue
 
-            confirm_new_password = getpass('\nConfirm New Password:  ').encode()
+            confirm_new_password = ct.getpass('\nConfirm New Password:  ', change=plength).encode()
 
             if new_password == confirm_new_password:
                 salt = bcrypt.gensalt()
                 hashed = bcrypt.hashpw(new_password, salt)
                 
                 self.password = hashed.decode()
+                self._update_database('Password', self.password)
 
                 cprint('\n\n--- Password Changed ---', 'light_green', attrs=['bold'])
-                wait_for_keypress()
-                clear()
-                self._update_database('Password', self.password)
+                ct.wait_for_keypress()
+                ct.clear()
                 return
 
             else:
                 cprint('\n\nPasswords do not match. Try again.', 'red')
-                wait_for_keypress()
+                ct.wait_for_keypress()
                 continue
 
 
     def change_hire_date(self):
         while True:
-            clear()
+            ct.clear()
             print('\n\nInput New Hire Date:  ', end='')
             new_hire_date = input()
 
@@ -400,7 +374,7 @@ class User():
                 
                 if yn == 'Y':
                     cprint('\n\n--- Change Canceled ---', 'light_yellow', attrs=['bold'])
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     return
                 
                 elif yn == 'N':
@@ -408,49 +382,35 @@ class User():
 
                 else:
                     cprint('\n\nInvalid input. Try again.', 'red')
-                    wait_for_keypress()
+                    ct.wait_for_keypress()
                     continue
             
             self.hire_date = new_hire_date
             self._update_database('Hire Date', self.hire_date)
 
             cprint('\n\n--- Hire Date Updated ---', 'light_green', attrs=['bold'])
-            wait_for_keypress()
+            ct.wait_for_keypress()
             return
         
     
     def promote(self):
         if self.user_type == 1:
             cprint('\n\nUsers cannot be promoted beyond manager status.', 'red')
-            wait_for_keypress()
+            ct.wait_for_keypress()
             return
         
         self.user_type = 1
-        query = find_query('Promote')
-        cursor.execute(query, (self.user_id,))
+        cursor.execute(ct.find_query('Promote:'), (self.user_id,))
         connection.commit()
 
         cprint('\n\n--- User Promoted ---', 'light_green', attrs=['bold'])
-        wait_for_keypress()
+        ct.wait_for_keypress()
         return
 
 
     def print_info(self):
-        if len(str(self.phone)) == 10:
-            phone_num = list(str(self.phone))
-            phone_num.insert(0, '(')
-            phone_num.insert(4, ') ')
-            phone_num.insert(8, '-')
-            phone_num = ''.join(phone_num)
-        
-        else:
-            phone_num = self.phone
-
-        if self.user_type == 0:
-            user_type = 'User'
-        
-        else:
-            user_type = 'Manager'
+        phone_num = ct.convert_phone_num(self.phone)
+        user_type = ct.convert_user_type(self.user_type)
 
         uid = colored(f'{"User ID:":20}', 'white', attrs=['bold'])
         fn = colored(f'{"First Name:":20}', 'white', attrs=['bold'])
@@ -474,7 +434,7 @@ class User():
 
         self.change_values()
 
-        clear()
+        ct.clear()
         return
 
 
@@ -490,23 +450,14 @@ class Manager(User):
 
     
     def _change_values_menu(self):
-        e = colored('EXIT', 'light_blue', attrs=['bold'])
-        print(f'\n\n\n{"-"*70}\nIf you would like to change a detail please select an option below,\nor type <{e}> to return to the menu\n{"-"*70}\n')
-        print('    (F)irst Name')
-        print('    (L)ast Name')
-        print('    (PH)one Number')
-        print('    (E)mail')
-        print('    (PA)ssword')
-        print('    (H)ire Date')
-        print('    (PR)omote User')
-        print(f'\n{"-"*70}\nIf the value you would like to change is not listed above,\nplease contact your administrator to rectify the information.\n{"-"*70}\n\n')
+        ct.m_change_values_menu()
 
 
     def change_values(self):
         global current_user
         self._change_values_menu()
         user_input = input().upper()
-        clear()
+        ct.clear()
 
         inputs = {'F': current_user.change_first_name,
                 'L': current_user.change_last_name,
@@ -524,27 +475,14 @@ class Manager(User):
 
         else:
             cprint('\n\nInvalid Input. Try again.', 'red')
-            wait_for_keypress()
+            ct.wait_for_keypress()
             return
 
 
     def print_info(self):
         global current_user
-        if len(str(current_user.phone)) == 10:
-            phone_num = list(str(current_user.phone))
-            phone_num.insert(0, '(')
-            phone_num.insert(4, ') ')
-            phone_num.insert(8, '-')
-            phone_num = ''.join(phone_num)
-        
-        else:
-            phone_num = current_user.phone
-
-        if current_user.user_type == 0:
-            user_type = 'User'
-        
-        else:
-            user_type = 'Manager'
+        phone_num = ct.convert_phone_num(current_user.phone)
+        user_type = ct.convert_user_type(current_user.user_type)
 
         uid = colored(f'{"User ID:":20}', 'white', attrs=['bold'])
         fn = colored(f'{"First Name:":20}', 'white', attrs=['bold'])
@@ -568,72 +506,110 @@ class Manager(User):
 
         self.change_values()
 
-        clear()
+        ct.clear()
+        return
+
+
+'''General Functions'''
+
+def create_database():
+    global database
+    database = 'competency_tracking.db'
+
+    if path.isfile(database):
         return
     
-
-def clear():
-    system('clear')
-
-
-def wait_for_keypress():
-    print('\n\nPress any key to continue...\n\n')
-    system("/bin/bash -c 'read -s -n 1 -p \"\"'")
-    print()
-
-
-def get_today():
-    today = str(date.today()).split('-')
-    today.append(today.pop(0))
-    return '/'.join(today)
-
-
-def find_query(title):
-    found = False
-    query = ''''''
+    global connection
+    global cursor
+    connection = sqlite3.connect(database)
+    cursor = connection.cursor()
     
-    with open('queries.txt', 'r') as f:
+    with open('create_tables.txt', 'r') as f:
+        creation_queries = f.read()
+
+    cursor.executescript(creation_queries)
+    connection.commit()
+
+    # ensures at least one manager
+    pw = 'thejoker'.encode()
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(pw, salt).decode()
+    Manager('John', 'Doe', '5555555555', 'johndoe@gmail.com', 'N/A', password=hashed)
+
+
+def login():
+    print(f'\n\nEnter your username:  ', end='')
+    username = input()
+    row = cursor.execute(ct.find_query('Login:'), (username,)).fetchone()
+
+    if not row:
+        cprint('\n\nCould not find user.', 'red')
+        ct.wait_for_keypress()
+        return
+    
+    else:
+        row = cursor.execute(ct.find_query('Get User:'), (row[0],)).fetchone()
+        password = ct.getpass('\nEnter your password:  ', login=username).encode()
+        if not bcrypt.checkpw(password, row[5].encode()):
+            cprint('\n\nIncorrect password.', 'red')
+            ct.wait_for_keypress()
+            return
         
-        while True:
-            line = f.readline()
-
-            if line == '___END___':
-                break
+        else:
+            global current_user
+            global logged_in
+            if row[9] == 0:
+                current_user = User(row[1], row[2], row[3], row[4], row[8], user_id=row[0], password=row[5], user_type=row[9])
             
-            if found:
-                if line.strip().endswith(';'):
-                    query += line.strip()
-                    break
-                
-                query += line
-                continue
+            else:
+                current_user = Manager(row[1], row[2], row[3], row[4], row[8], user_id=row[0], password=row[5])
 
-            if line.startswith(title):
-                found = True
-                continue
-    
-    return query
+            logged_in = current_user
 
+            cursor.execute(ct.find_query('Update Status:'), (1, current_user.user_id))
+            connection.commit()
+            
+            cprint('\n\n--- Successfully Logged In ---', 'light_green', attrs=['bold'])
+            cprint(f'\n{"Welcome " + current_user.first_name:^30}', 'light_cyan', attrs=['bold'])
+            ct.wait_for_keypress()
+
+            if current_user.user_type == 0:
+                user_menu()
+
+            else:
+                manager_menu()
+
+
+def import_data():
+    # assessment results
+    pass
+
+
+def export_data():
+    # comptetency reports
+    # single user competency
+    # export as csv and pdf
+    pass
+
+
+'''Get Specific Records'''
 
 def get_user():
     uid = colored('User ID', 'white', attrs=['bold'])
     e = colored('EXIT', 'light_blue', attrs=['bold'])
     print(f'\n\nEnter the {uid} to see more details, or type <{e}> to return to the main menu:  ', end='')
     user_input = input().upper()
-    clear()
+    ct.clear()
 
     if user_input == 'EXIT':
         return 'EXIT'
     
     elif user_input.isnumeric():
-        query = find_query('Get User')
-        values = (user_input,)
-
-        row = cursor.execute(query, values).fetchone()
+        row = cursor.execute(ct.find_query('Get User:'), (user_input,)).fetchone()
 
         if not row:
             cprint('\n\nNo user with this ID exists.', 'red')
-            wait_for_keypress()
+            ct.wait_for_keypress()
             return
 
         global current_user
@@ -642,7 +618,7 @@ def get_user():
         global logged_in
         if current_user.user_type == 1 and current_user.user_id != logged_in.user_id:
             cprint('\n\nYou cannot make edits to this user.', 'red')
-            wait_for_keypress()
+            ct.wait_for_keypress()
             current_user = logged_in
             return
 
@@ -650,7 +626,55 @@ def get_user():
 
     else:
         cprint('\n\nInvalid input. Try again.', 'red')
-        wait_for_keypress()
+        ct.wait_for_keypress()
+        return
+
+
+def get_assessment():
+    aid = colored('Assessment ID', 'white', attrs=['bold'])
+    e = colored('EXIT', 'light_blue', attrs=['bold'])
+    print(f'\n\nEnter the {aid} to see more details,\nor type <{e}> to return to the main menu:    ', end='')
+    user_input = input().upper()
+    ct.clear()
+
+    if user_input == 'EXIT':
+        return 'EXIT'
+    
+    elif not user_input.isnumeric(): 
+        cprint('\n\nInvalid input. Try again.', 'red')
+        ct.wait_for_keypress()
+        return
+    
+    else:
+        row = cursor.execute(ct.find_query('Get Assessment:'), (user_input,)).fetchone()
+
+        if not row:
+            cprint('\n\nNo assessment with this ID exists.', 'red')
+            ct.wait_for_keypress()
+            return
+
+        cid = colored(f'{"Assessment ID:":20}', 'white', attrs=['bold'])
+        n = colored(f'{"Name:":20}', 'white', attrs=['bold'])
+        dc = colored(f'{"Date Created:":20}', 'white', attrs=['bold'])
+
+        cprint(f'\n\n{"Assessment Information":^70}', 'white', attrs=['bold'])
+        cprint('-'*70, 'light_grey')
+        cprint(f'{cid}{row[0]:>50}')
+        cprint(f'{n}{row[1]:>50}')
+        cprint(f'{dc}{row[2]:>50}')
+
+    e = colored('EXIT', 'light_blue', attrs=['bold'])
+    print(f'\n\n\n{"-"*70}\nIf you would like to change a detail please select an option below,\nor type <{e}> to return to the menu\n{"-"*70}\n')
+    print('    (N)ame\n\n')
+    user_input = input().upper()
+    ct.clear()
+
+    if user_input == 'EXIT':
+        return
+
+    else:
+        cprint('\n\nInvalid Input. Try again.', 'red')
+        ct.wait_for_keypress()
         return
 
 
@@ -659,32 +683,25 @@ def get_competency():
     e = colored('EXIT', 'light_blue', attrs=['bold'])
     print(f'\n\nEnter the {cid} to see more details,\nor type <{e}> to return to the main menu:    ', end='')
     user_input = input().upper()
-    clear()
+    ct.clear()
 
     if user_input == 'EXIT':
         return 'EXIT'
     
     elif not user_input.isnumeric(): 
         cprint('\n\nInvalid input. Try again.', 'red')
-        wait_for_keypress()
+        ct.wait_for_keypress()
         return
     
     else:
-        query = find_query('Get Competency')
-        values = (user_input,)
-
-        row = cursor.execute(query, values).fetchone()
+        row = cursor.execute(ct.find_query('Get Competency:'), (user_input,)).fetchone()
 
         if not row:
-            cprint('\n\nNo user with this ID exists.', 'red')
-            wait_for_keypress()
+            cprint('\n\nNo competency with this ID exists.', 'red')
+            ct.wait_for_keypress()
             return
         
-        if not row[3]:
-            assessment = 'N/A'
-
-        else:
-            assessment = cursor.execute(f'SELECT name FROM Assessments WHERE assessment_id={row[3]};').fetchone()
+        assessment = ct.convert_assessment_id(row[3])
 
         cid = colored(f'{"Competency ID:":20}', 'white', attrs=['bold'])
         n = colored(f'{"Name:":20}', 'white', attrs=['bold'])
@@ -696,13 +713,14 @@ def get_competency():
         cprint(f'{cid}{row[0]:>50}')
         cprint(f'{n}{row[1]:>50}')
         cprint(f'{dc}{row[2]:>50}')
-        cprint(f'{aa}{assessment[0]:>50}')
+        cprint(f'{aa}{assessment:>50}')
 
     e = colored('EXIT', 'light_blue', attrs=['bold'])
     print(f'\n\n\n{"-"*70}\nIf you would like to change a detail please select an option below,\nor type <{e}> to return to the menu\n{"-"*70}\n')
+    print('    (N)ame\n\n')
     print('    (A)ssessment ID\n\n')
     user_input = input().upper()
-    clear()
+    ct.clear()
 
     if user_input == 'EXIT':
         return
@@ -712,80 +730,25 @@ def get_competency():
 
     else:
         cprint('\n\nInvalid Input. Try again.', 'red')
-        wait_for_keypress()
+        ct.wait_for_keypress()
         return
 
 
-def create_database():
-    global database
-    database = 'test.db'
-
-    if path.isfile(database):
-        return
-    
-    global connection
-    global cursor
-    connection = sqlite3.connect(database)
-    cursor = connection.cursor()
-    
-    with open('create_tables.txt', 'r') as f:
-        queries = f.read()
-
-    cursor.executescript(queries)
-    connection.commit()
-
-    x = Manager('John', 'Doe', '5555555555', 'johndoe@gmail.com', 'N/A')
-
-
-def getpass(prompt):
-    sys.stdout.write(prompt)
-    sys.stdout.flush()
-    password = ''
-    while True:
-        c = getch.getch()
-        if c == '\n':
-            sys.stdout.write('\n')
-            sys.stdout.flush()
-            return password
-        password += c
-        sys.stdout.write('*')
-        sys.stdout.flush()
-
+'''View All Records'''
 
 def view_users(c=0):
-    query = find_query('View Users')
-
     while True:
-        rows = cursor.execute(query).fetchall()
+        rows = cursor.execute(ct.find_query('View Users:')).fetchall()
         
-        clear()
+        ct.clear()
         cprint(f'\n\n{"User Records":^170}', 'light_grey', attrs=['bold'])
         print('-'*170)
         cprint(f'\n {"ID":5}{"First Name":23}{"Last Name":23}{"Phone":19}{"Email":33}{"Password":13}{"Status":13}{"Date Created":15}{"Hire Date":15}{"User Type":9}', 'light_grey', attrs=['bold'])
         print(f' {"-"*2:5}{"-"*20:23}{"-"*20:23}{"-"*16:19}{"-"*30:33}{"-"*10:13}{"-"*10:13}{"-"*12:15}{"-"*12:15}{"-"*9:9}')
         for row in rows:
-            if len(str(row[3])) == 10:
-                phone_num = list(str(row[3]))
-                phone_num.insert(0, '(')
-                phone_num.insert(4, ') ')
-                phone_num.insert(8, '-')
-                phone_num = ''.join(phone_num)
-        
-            else:
-                phone_num = row[3]
-            
-            if row[6] == 1:
-                status = 'Active'
-
-            else:
-                status = 'Inactive'
-            
-            if row[9] == 0:
-                user_type = 'User'
-            
-            else:
-                user_type = 'Manager'
-            
+            phone_num = ct.convert_phone_num(row[3])
+            status = ct.convert_status(row[6])
+            user_type = ct.convert_user_type(row[9])
             print(f' {row[0]:>2}   {row[1]:23}{row[2]:23}{phone_num:19}{row[4]:33}{"*"*8:13}{status:13}{row[7]:15}{row[8]:15}{user_type:9}')
         
         if c != 0:
@@ -803,12 +766,10 @@ def view_reports():
 
 
 def view_assessments(c=0):
-    query = find_query('View Assessments')
-
     while True:
-        rows = cursor.execute(query).fetchall()
+        rows = cursor.execute(ct.find_query('View Assessments:')).fetchall()
         
-        clear()
+        ct.clear()
         cprint(f'\n\n{"Assessments":^42}', 'light_grey', attrs=['bold'])
         print('-'*42)
         cprint(f'\n{"ID":5}{"Name":25}{"Date Created":12}', 'light_grey', attrs=['bold'])
@@ -817,7 +778,7 @@ def view_assessments(c=0):
             print(f'{row[0]:>2}   {row[1]:25}{row[2]:12}')
         
         if c == 0:
-            wait_for_keypress()
+            ct.wait_for_keypress()
             return
         
         else:
@@ -825,12 +786,10 @@ def view_assessments(c=0):
         
 
 def view_competencies():
-    query = find_query('View Competencies')
-
     while True:
-        rows = cursor.execute(query).fetchall()
+        rows = cursor.execute(ct.find_query('View Competencies:')).fetchall()
         
-        clear()
+        ct.clear()
         cprint(f'\n\n{"Competencies":^42}', 'light_grey', attrs=['bold'])
         print('-'*42)
         cprint(f'\n{"ID":5}{"Name":25}{"Date Created":12}', 'light_grey', attrs=['bold'])
@@ -844,6 +803,8 @@ def view_competencies():
         else:
             continue
 
+
+'''Create Records'''
 
 def add_user():
     y = colored('YELLOW', 'yellow', attrs=['bold'])
@@ -872,8 +833,6 @@ def add_user():
     hd = colored('Hire Date', 'white', attrs=['bold'])
     print(f'\nPlease input the {hd}:{" "*6}', end='')
     hire_date = input()
-    if hire_date != 'N/A':
-        hire_date = hire_date.zfill(10)
 
     pw = '1234'.encode()
     salt = bcrypt.gensalt()
@@ -887,11 +846,11 @@ def add_assessment():
     print(f'\n\nPlease input the {n} of the assessment:{" "*3}', end='')
     name = input().capitalize()
 
-    cursor.execute(find_query('Add Assessment'), (name, get_today()))
+    cursor.execute(ct.find_query('Add Assessment:'), (name, ct.get_today()))
     connection.commit()
 
     cprint('\n\n--- Assessment Added ---', 'light_green', attrs=['bold'])
-    wait_for_keypress()
+    ct.wait_for_keypress()
     return
 
 
@@ -907,7 +866,13 @@ def add_assessment_result():
     user_id = input()
     if not user_id.isnumeric():
         cprint('\n\nInvalid input. Try again.')
-        wait_for_keypress()
+        ct.wait_for_keypress()
+        return
+    
+    row = cursor.execute(ct.find_query('Get User:'), (user_id,)).fetchone()
+    if not row:
+        cprint('\n\nNo user with this ID exists.', 'red')
+        ct.wait_for_keypress()
         return
 
     view_assessments(1)
@@ -917,10 +882,16 @@ def add_assessment_result():
     assessment_id = input()
     if not assessment_id.isnumeric():
         cprint('\n\nInvalid input. Try again.')
-        wait_for_keypress()
+        ct.wait_for_keypress()
         return
-    
-    clear()
+
+    row = cursor.execute(ct.find_query('Get Assessment:'), (assessment_id,)).fetchone()
+    if not row:
+        cprint('\n\nNo assessment with this ID exists.', 'red')
+        ct.wait_for_keypress()
+        return
+
+    ct.clear()
 
     print(f'\n\nPlease input the {uid}:{" "*10}{user_id}')
     print(f'\n\nPlease input the {aid}:{" "*4}{assessment_id}')
@@ -931,14 +902,14 @@ def add_assessment_result():
     score = input()
     if not score.isnumeric():
         cprint('\n\nInvalid input. Try again.')
-        wait_for_keypress()
+        ct.wait_for_keypress()
         return
 
-    cursor.execute(find_query('Add Assessment Result'), (user_id, assessment_id, date_completed, score))
+    cursor.execute(ct.find_query('Add Assessment Result:'), (user_id, assessment_id, date_completed, score))
     connection.commit()
 
     cprint('\n\n--- Assessment Result Added ---', 'light_green', attrs=['bold'])
-    wait_for_keypress()
+    ct.wait_for_keypress()
     return
 
 
@@ -946,9 +917,9 @@ def add_competency():
     n = colored('Name', 'light_yellow', attrs=['bold'])
     print(f'\n\nPlease input the {n} of the competency:{" "*12}', end='')
     name = input().capitalize()
-    clear()
+    ct.clear()
 
-    cursor.execute(find_query('Add Competency'), (name, get_today()))
+    cursor.execute(ct.find_query('Add Competency:'), (name, ct.get_today()))
     connection.commit()
 
     view_assessments(1)
@@ -957,19 +928,25 @@ def add_competency():
     aid = colored('Assessment ID', 'white', attrs=['bold'])
     print(f'\n\nPlease input the {aid} (\'Enter\' to skip):{" "*3}', end='')
     assessment_id = input().upper()
-    clear()
+    ct.clear()
+
+    row = cursor.execute(ct.find_query('Get Assessment:'), (assessment_id,)).fetchone()
+    if not row:
+        cprint('\n\nNo assessment with this ID exists.', 'red')
+        ct.wait_for_keypress()
+        return
 
     print(f'\n\nPlease input the {n} of the competency:{" "*12}{name}')
 
     if assessment_id:
         print(f'\n\nPlease input the {aid} (\'Enter\' to skip):{" "*3}{assessment_id}')
 
-        competency_id = cursor.execute(f'SELECT competency_id FROM Competencies WHERE name=\'{name}\'').fetchone()
-        cursor.execute(find_query('Assign Assessment to Competency'), (assessment_id, competency_id[0]))
+        competency_id = cursor.execute(ct.find_query('Get Competency ID:'), (f'\'{name}\'',)).fetchone()
+        cursor.execute(ct.find_query('Assign Assessment to Competency:'), (assessment_id, competency_id[0]))
         connection.commit()
 
     cprint('\n\n--- Competency Added ---', 'light_green', attrs=['bold'])
-    wait_for_keypress()
+    ct.wait_for_keypress()
     return
 
 
@@ -979,22 +956,19 @@ def assign_assessment(competency_id):
     aid = colored('Assessment ID', 'white', attrs=['bold'])
     print(f'\n\nPlease input the {aid}:{" "*3}', end='')
     assessment_id = input().upper()
-    clear()
+    ct.clear()
     
     if not assessment_id.isnumeric(): 
         cprint('\n\nInvalid input. Try again.', 'red')
-        wait_for_keypress()
+        ct.wait_for_keypress()
         return
     
     else:
-        query = find_query('Assign Assessment to Competency')
-        values = (assessment_id, competency_id)
-
-        cursor.execute(query, values)
+        cursor.execute(ct.find_query('Assign Assessment to Competency:'), (assessment_id, competency_id))
         connection.commit()
 
     cprint('\n\n--- Assessment Assigned ---', 'light_green', attrs=['bold'])
-    wait_for_keypress()
+    ct.wait_for_keypress()
     return
 
 
@@ -1002,136 +976,21 @@ def delete_assessment_result():
     pass
 
 
-def import_data():
-    # assessment results
-    pass
-
-
-def export_data():
-    # comptetency reports
-    # single user competency
-    # export as csv and pdf
-    pass
-
-  
-def login():
-    print(f'\n\nEnter your username:  ', end='')
-    username = input()
-
-    query = find_query('Login')
-    row = cursor.execute(query, (username,)).fetchone()
-
-    if not row:
-        cprint('\n\nCould not find user.', 'red')
-        wait_for_keypress()
-        return
-    
-    else:
-        query = find_query('Get User')
-        row = cursor.execute(query, (row[0],)).fetchone()
-
-        password = getpass('\nEnter your password:  ').encode()
-        if not bcrypt.checkpw(password, row[5].encode()):
-            cprint('\n\nIncorrect password.', 'red')
-            wait_for_keypress()
-            return
-        
-        else:
-            global current_user
-            global logged_in
-            if row[9] == 0:
-                current_user = User(row[1], row[2], row[3], row[4], row[8], user_id=row[0], password=row[5], user_type=row[9])
-            
-            else:
-                current_user = Manager(row[1], row[2], row[3], row[4], row[8], user_id=row[0], password=row[5])
-
-            logged_in = current_user
-
-
-            query = find_query('Update Status')
-            cursor.execute(query, (1, current_user.user_id))
-            connection.commit()
-            
-            cprint('\n\n--- Successfully Logged In ---', 'light_green', attrs=['bold'])
-            cprint(f'\n{"Welcome " + current_user.first_name:^30}', 'light_cyan', attrs=['bold'])
-            wait_for_keypress()
-
-            if current_user.user_type == 0:
-                user_menu()
-
-            else:
-                manager_menu()
-
-            return
-
-
-def print_main_menu():
-    cprint(f'\n\n{"Menu":^16}', 'white', attrs=['bold'])
-    print('-'*16)
-    print('  (L)og In')
-    cprint('  (Q)uit\n\n', 'red')
-
-
-def print_user_menu():
-    clear()
-    cprint(f'\n\n{"User Menu":^26}', 'white', attrs=['bold'])
-    print('-'*26)
-    print('  (M)y Information')
-    print('  (A)ssessment History')
-    print('  (C)ompetencies')
-    cprint('  (L)og Out\n\n', 'red')
-
-
-def print_manager_menu():
-    clear()
-    cprint(f'\n\n{"Manager Menu":^26}', 'white', attrs=['bold'])
-    print('-'*26)
-    print('  (M)y Information')
-    print('  (C)reation Menu')
-    print('  (V)iew Menu')
-    print('  (S)earch Users')
-    print('  (R)eports')
-    cprint('  (L)og Out\n\n', 'red')
-
-
-def print_creation_menu():
-    clear()
-    cprint(f'\n\n{"Creation Menu":^26}', 'white', attrs=['bold'])
-    print('-'*26)
-    print('  (U)ser')
-    print('  (A)ssessment')
-    print('  (AS)sessment Result')
-    print('  (C)ompetency')
-    cprint('  (M)ain Menu', 'light_blue')
-    cprint('  (L)og out\n\n', 'red')
-
-
-def print_view_menu():
-    clear()
-    cprint(f'\n\n{"View Menu":^26}', 'white', attrs=['bold'])
-    print('-'*26)
-    print('  (U)sers')
-    print('  (A)ssessments')
-    print('  (AS)sessment Results')
-    print('  (C)ompetencies')
-    cprint('  (M)ain Menu', 'light_blue')
-    cprint('  (L)og Out\n\n', 'red')
-
+'''Menus'''
 
 def user_menu():
     global current_user
     while True:
-        print_user_menu()
+        ct.print_user_menu()
         inputs = {'M': current_user.print_info,
                   'A': 'assessment history',
                   'C': 'competencies'}
         
         user_input = input().upper()
-        clear()
+        ct.clear()
 
         if user_input == 'L':
-            query = find_query('Update Status')
-            cursor.execute(query, (0, logged_in.user_id))
+            cursor.execute(ct.find_query('Update Status:'), (0, logged_in.user_id))
             connection.commit()
             return
         
@@ -1140,14 +999,14 @@ def user_menu():
         
         else:
             cprint('\n\nInvalid input. Try again.', 'red')
-            wait_for_keypress()
+            ct.wait_for_keypress()
             continue
 
 
 def manager_menu():
     global current_user
     while True:
-        print_manager_menu()
+        ct.print_manager_menu()
         inputs = {'M': current_user.print_info,
                   'C': creation_menu,
                   'V': view_menu,
@@ -1155,11 +1014,10 @@ def manager_menu():
                   'R': 'reports'}
         
         user_input = input().upper()
-        clear()
+        ct.clear()
 
         if user_input == 'L':
-            query = find_query('Update Status')
-            cursor.execute(query, (0, logged_in.user_id))
+            cursor.execute(ct.find_query('Update Status:'), (0, logged_in.user_id))
             connection.commit()
             return
         
@@ -1169,25 +1027,24 @@ def manager_menu():
         
         else:
             cprint('\n\nInvalid input. Try again.', 'red')
-            wait_for_keypress()
+            ct.wait_for_keypress()
             continue
 
 
 def creation_menu():
     global current_user
     while True:
-        print_creation_menu()
+        ct.print_creation_menu()
         inputs = {'U': add_user,
                   'A': add_assessment,
                   'AS': add_assessment_result,
                   'C': add_competency}
         
         user_input = input().upper()
-        clear()
+        ct.clear()
 
         if user_input == 'L':
-            query = find_query('Update Status')
-            cursor.execute(query, (0, current_user.user_id))
+            cursor.execute(ct.find_query('Update Status:'), (0, current_user.user_id))
             connection.commit()
             return 'LOG OUT'
         
@@ -1199,25 +1056,24 @@ def creation_menu():
         
         else:
             cprint('\n\nInvalid input. Try again.', 'red')
-            wait_for_keypress()
+            ct.wait_for_keypress()
             continue
 
 
 def view_menu():
     global current_user
     while True:
-        print_view_menu()
+        ct.print_view_menu()
         inputs = {'U': view_users,
                   'A': view_assessments,
                   'AS': 'view assessment results',
                   'C': view_competencies}
         
         user_input = input().upper()
-        clear()
+        ct.clear()
 
         if user_input == 'L':
-            query = find_query('Update Status')
-            cursor.execute(query, (0, current_user.user_id))
+            cursor.execute(ct.find_query('Update Status:'), (0, current_user.user_id))
             connection.commit()
             return 'LOG OUT'
         
@@ -1229,16 +1085,16 @@ def view_menu():
         
         else:
             cprint('\n\nInvalid input. Try again.', 'red')
-            wait_for_keypress()
+            ct.wait_for_keypress()
             continue
 
 
 def main_menu():
     while True:
-        clear()
-        print_main_menu()
+        ct.clear()
+        ct.print_main_menu()
         user_input = input().upper()
-        clear()
+        ct.clear()
 
         if user_input == 'Q':
             cprint('\n\nGoodbye\n\n', 'light_cyan', attrs=['bold'])
@@ -1250,14 +1106,17 @@ def main_menu():
         
         else:
             cprint('\n\nInvalid input. Try again.', 'red')
-            wait_for_keypress()
+            ct.wait_for_keypress()
             continue
 
 
+'''Executes Code'''
+
 if __name__ == '__main__':
     create_database()
-    database = 'test.db'
+    database = 'competency_tracking.db'
     connection = sqlite3.connect(database)
     cursor = connection.cursor()
+    ct.initialize()
 
     main_menu()
