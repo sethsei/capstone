@@ -7,8 +7,6 @@ from os import path
 '''User & Manager Objects'''
 
 class User():
-    # can view their assessment results
-    # can view their competencies
     def __init__(self, first_name, last_name, phone, email, hire_date, user_id=0, password=None, user_type=0):
         global database
         global connection
@@ -82,10 +80,6 @@ class User():
         connection.commit()
 
 
-    def _change_values_menu(self):
-        ct.u_change_values_menu()
-
-
     def _update_user_competencies(self):
         competencies = cursor.execute(ct.find_query('Get Competency IDs:')).fetchall()
         if not competencies:
@@ -128,13 +122,11 @@ class User():
     
 
     def change_values(self):
-        self._change_values_menu()
+        ct.u_change_values_menu()
         user_input = input().upper()
         ct.clear()
 
-        inputs = {'F': self.change_first_name,
-                'L': self.change_last_name,
-                'PH': self.change_phone,
+        inputs = {'PH': self.change_phone,
                 'E': self.change_email,
                 'PA': self.change_password}
 
@@ -438,24 +430,47 @@ class User():
         return
 
 
+    def print_assessment_results(self):
+        rows = cursor.execute(ct.find_query('View User Assessment Results:'), (self.user_id,)).fetchall()
+
+        ct.clear()
+        cprint(f'\n\n{"Assessment History":^52}', 'light_grey', attrs=['bold'])
+        print('-'*52)
+        cprint(f'\n{"Assessment":30}{"Date Completed":17}{"Score":5}', 'light_grey', attrs=['bold'])
+        print(f'{"-"*27:30}{"-"*14:17}{"-"*5:5}')
+        for row in rows:
+            print(f'{row[0]:30}{row[1]:17}{row[2]:5}')
+
+        ct.wait_for_keypress()
+        return
+
+
+    def print_competencies(self):
+        rows = cursor.execute(ct.find_query('View User Competencies:'), (self.user_id,)).fetchall()
+        
+        ct.clear()
+        cprint(f'\n\n{"Competency Scores":^35}', 'light_grey', attrs=['bold'])
+        print('-'*35)
+        cprint(f'\n{"Competency":30}{"Score":5}', 'light_grey', attrs=['bold'])
+        print(f'{"-"*27:30}{"-"*5:5}')
+        for row in rows:
+            print(f'{row[0]:30}{row[1]:5}')
+
+        ct.wait_for_keypress()
+        return
+
+
 class Manager(User):
-    # search for users by first or last name
     # view reports of users grouped by competency
-    # view comptency of individual user
-    # view assessments for a user
     # edit: competency, assessment, assessment result
     # delete: assessment result
     def __init__(self, first_name, last_name, phone, email, hire_date, user_id=0, password=None):
         super().__init__(first_name, last_name, phone, email, hire_date, user_id, password, user_type=1)
 
-    
-    def _change_values_menu(self):
-        ct.m_change_values_menu()
-
 
     def change_values(self):
         global current_user
-        self._change_values_menu()
+        ct.m_change_values_menu()
         user_input = input().upper()
         ct.clear()
 
@@ -465,7 +480,9 @@ class Manager(User):
                 'E': current_user.change_email,
                 'PA': current_user.change_password,
                 'H': current_user.change_hire_date,
-                'PR': current_user.promote}
+                'PR': current_user.promote,
+                'A': current_user.print_assessment_results,
+                'C': current_user.print_competencies}
 
         if user_input == 'EXIT':
             return
@@ -736,9 +753,16 @@ def get_competency():
 
 '''View All Records'''
 
-def view_users(c=0):
+def view_users(c=0, fsearch=None, lsearch=None):
     while True:
-        rows = cursor.execute(ct.find_query('View Users:')).fetchall()
+        if not fsearch and not lsearch:
+            rows = cursor.execute(ct.find_query('View Users:')).fetchall()
+
+        elif fsearch:
+            rows = cursor.execute(ct.find_query('Search Users First Name:'), (fsearch,)).fetchall()
+        
+        elif lsearch:
+            rows = cursor.execute(ct.find_query('Search Users Last Name'), (lsearch,)).fetchall()
         
         ct.clear()
         cprint(f'\n\n{"User Records":^170}', 'light_grey', attrs=['bold'])
@@ -761,10 +785,6 @@ def view_users(c=0):
             continue
 
 
-def view_reports():
-    pass
-
-
 def view_assessments(c=0):
     while True:
         rows = cursor.execute(ct.find_query('View Assessments:')).fetchall()
@@ -783,7 +803,7 @@ def view_assessments(c=0):
         
         else:
             return
-        
+
 
 def view_competencies():
     while True:
@@ -801,6 +821,34 @@ def view_competencies():
             return
         
         else:
+            continue
+
+
+def view_reports():
+    pass
+
+
+def search_users():
+    while True:
+        ct.print_search_menu()
+        search = input().upper()
+        ct.clear()
+
+        if search == 'V':
+            return
+
+        print('\n\nEnter search query:  ', end='')
+        query = input()
+        
+        if search == 'F':
+            view_users(fsearch=query)
+
+        elif search == 'L':
+            view_users(lsearch=query)
+        
+        else:
+            cprint('\n\nInvalid input. Try again.', 'red')
+            ct.wait_for_keypress()
             continue
 
 
@@ -844,7 +892,7 @@ def add_user():
 def add_assessment():
     n = colored('Name', 'light_yellow', attrs=['bold'])
     print(f'\n\nPlease input the {n} of the assessment:{" "*3}', end='')
-    name = input().capitalize()
+    name = input().title()
 
     cursor.execute(ct.find_query('Add Assessment:'), (name, ct.get_today()))
     connection.commit()
@@ -916,7 +964,7 @@ def add_assessment_result():
 def add_competency():
     n = colored('Name', 'light_yellow', attrs=['bold'])
     print(f'\n\nPlease input the {n} of the competency:{" "*12}', end='')
-    name = input().capitalize()
+    name = input().title()
     ct.clear()
 
     cursor.execute(ct.find_query('Add Competency:'), (name, ct.get_today()))
@@ -941,7 +989,7 @@ def add_competency():
     if assessment_id:
         print(f'\n\nPlease input the {aid} (\'Enter\' to skip):{" "*3}{assessment_id}')
 
-        competency_id = cursor.execute(ct.find_query('Get Competency ID:'), (f'\'{name}\'',)).fetchone()
+        competency_id = cursor.execute(ct.find_query('Get Competency ID:'), (name,)).fetchone()
         cursor.execute(ct.find_query('Assign Assessment to Competency:'), (assessment_id, competency_id[0]))
         connection.commit()
 
@@ -983,8 +1031,8 @@ def user_menu():
     while True:
         ct.print_user_menu()
         inputs = {'M': current_user.print_info,
-                  'A': 'assessment history',
-                  'C': 'competencies'}
+                  'A': current_user.print_assessment_results,
+                  'C': current_user.print_competencies}
         
         user_input = input().upper()
         ct.clear()
@@ -1009,9 +1057,7 @@ def manager_menu():
         ct.print_manager_menu()
         inputs = {'M': current_user.print_info,
                   'C': creation_menu,
-                  'V': view_menu,
-                  'S': 'search users',
-                  'R': 'reports'}
+                  'V': view_menu}
         
         user_input = input().upper()
         ct.clear()
@@ -1066,8 +1112,9 @@ def view_menu():
         ct.print_view_menu()
         inputs = {'U': view_users,
                   'A': view_assessments,
-                  'AS': 'view assessment results',
-                  'C': view_competencies}
+                  'C': view_competencies,
+                  'S': search_users,
+                  'R': view_reports}
         
         user_input = input().upper()
         ct.clear()

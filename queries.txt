@@ -75,6 +75,18 @@ SELECT *
 FROM Users
 ORDER BY user_type ASC;
 
+Search Users First Name:
+SELECT *
+FROM Users
+WHERE first_name LIKE ?
+ORDER BY user_type ASC;
+
+Search Users Last Name:
+SELECT *
+FROM Users
+WHERE last_name LIKE ?
+ORDER BY user_type ASC;
+
 View Assessments:
 SELECT *
 FROM Assessments;
@@ -82,6 +94,22 @@ FROM Assessments;
 View Competencies:
 SELECT *
 FROM Competencies;
+
+View User Assessment Results:
+SELECT a.name, ar.date_completed, ar.score
+FROM Assessment_results AS ar
+INNER JOIN Assessments AS a
+    ON ar.assessment_id = a.assessment_id
+WHERE ar.user_id=?
+ORDER BY ar.assessment_id ASC, ar.score DESC;
+
+View User Competencies:
+SELECT c.name, uc.competency_score
+FROM User_competencies AS uc
+INNER JOIN Competencies AS c
+    ON uc.competency_id = c.competency_id
+WHERE uc.user_id=?
+ORDER BY uc.competency_id ASC;
 
 --- GET DATA ---
 

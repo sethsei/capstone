@@ -146,8 +146,6 @@ def convert_assessment_id(assessment_id):
 def u_change_values_menu():
     e = colored('EXIT', 'light_blue', attrs=['bold'])
     print(f'\n\n\n{"-"*70}\nIf you would like to change a detail please select an option below,\nor type <{e}> to return to the menu\n{"-"*70}\n')
-    print('    (F)irst Name')
-    print('    (L)ast Name')
     print('    (PH)one Number')
     print('    (E)mail')
     print('    (PA)ssword')
@@ -156,14 +154,17 @@ def u_change_values_menu():
 
 def m_change_values_menu():
     e = colored('EXIT', 'light_blue', attrs=['bold'])
-    print(f'\n\n\n{"-"*70}\nIf you would like to change a detail please select an option below,\nor type <{e}> to return to the menu\n{"-"*70}\n')
+    print(f'\n\n\n{"-"*70}\nIf you would like to change a detail please select an option below,\nor type <{e}> to return to all users\n{"-"*70}\n')
     print('    (F)irst Name')
     print('    (L)ast Name')
     print('    (PH)one Number')
     print('    (E)mail')
     print('    (PA)ssword')
     print('    (H)ire Date')
-    print('    (PR)omote User\n\n')
+    print('    (PR)omote User')
+    print(f'\n{"-"*70}\nTo view this user\'s data, please select an option below\n{"-"*70}\n')
+    print('    (A)ssessment History')
+    print('    (C)ompetencies\n\n')
 
 
 def print_main_menu():
@@ -190,8 +191,6 @@ def print_manager_menu():
     print('  (M)y Information')
     print('  (C)reation Menu')
     print('  (V)iew Menu')
-    print('  (S)earch Users')
-    print('  (R)eports')
     cprint('  (L)og Out\n\n', 'red')
 
 
@@ -213,10 +212,20 @@ def print_view_menu():
     print('-'*26)
     print('  (U)sers')
     print('  (A)ssessments')
-    print('  (AS)sessment Results')
     print('  (C)ompetencies')
+    print('  (S)earch Users')
+    print('  (R)eports')
     cprint('  (M)ain Menu', 'light_blue')
     cprint('  (L)og Out\n\n', 'red')
+
+
+def print_search_menu():
+    clear()
+    cprint(f'\n\n{"Search By":^20}', attrs=['bold'])
+    print('-'*20)
+    print('  (F)irst Name')
+    print('  (L)ast Name')
+    cprint('  (V)iew Menu\n\n', 'light_blue')
 
 
 '''For Testing'''
