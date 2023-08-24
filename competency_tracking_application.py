@@ -619,13 +619,6 @@ def import_data():
     pass
 
 
-def export_data():
-    # comptetency reports
-    # single user competencies
-    # export as csv and pdf
-    pass
-
-
 '''Get Specific Records'''
 
 def get_user():
@@ -858,6 +851,8 @@ def view_competencies():
 
 
 def view_reports():
+    # comptetency reports as pdf
+    # single user competencies as pdf
     pass
 
 
@@ -1122,7 +1117,8 @@ def manager_menu():
         ct.print_manager_menu()
         inputs = {'M': current_user.print_info,
                   'C': creation_menu,
-                  'V': view_menu}
+                  'V': view_menu,
+                  'E': ct.export_data}
         
         user_input = input().upper()
         ct.clear()
@@ -1214,7 +1210,6 @@ def main_menu():
 
         if user_input == 'L':
             login()
-
         
         else:
             cprint('\n\nInvalid input. Try again.', 'red')

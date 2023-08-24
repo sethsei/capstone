@@ -233,5 +233,13 @@ Delete Assessment Result:
 DELETE FROM Assessment_results
 WHERE user_id=? AND assessment_id=? AND score=?;
 
+CSV Users:
+SELECT *
+FROM Users;
+
+CSV Assessments:
+SELECT *
+FROM Assessments;
+
 
 ___END___

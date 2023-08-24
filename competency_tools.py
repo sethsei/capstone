@@ -1,4 +1,4 @@
-import sqlite3, getch, sys
+import sqlite3, getch, sys, csv
 from os import system
 from datetime import date
 from termcolor import colored, cprint
@@ -122,6 +122,23 @@ def find_query(title):
                 continue
 
 
+def export_data():
+    with open('reports/users.csv', 'w') as f:
+        writer = csv.writer(f)
+        writer.writerow(('user_id', 'first_name', 'last_name', 'phone', 'email', 'password', 'active', 'date_created', 'hire_date', 'user_type'))
+        writer.writerows(cursor.execute(find_query('CSV Users:')).fetchall())
+    
+    with open('reports/assessments.csv', 'w') as f:
+        writer = csv.writer(f)
+        writer.writerow(('assessment_id', 'name', 'date_created'))
+        writer.writerows(cursor.execute(find_query('CSV Assessments:')).fetchall())
+
+    clear()
+    cprint('\n\n--- Users and Assessments Exported ---\n\n', 'light_green', attrs=['bold'])
+    print(f'This data can be found inside the {colored("Reports", attrs=["bold"])} folder as \'users.csv\' and \'assessments.csv\'')
+    wait_for_keypress()
+
+
 '''Print Related Functions'''
 
 def convert_phone_num(phone):
@@ -211,6 +228,7 @@ def print_manager_menu():
     print('  (M)y Information')
     print('  (C)reation Menu')
     print('  (V)iew Menu')
+    print('  (E)xport Data')
     cprint('  (L)og Out\n\n', 'red')
 
 
