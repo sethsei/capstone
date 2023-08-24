@@ -31,10 +31,13 @@ CREATE TABLE IF NOT EXISTS Assessment_results (
     assessment_id INTEGER,
     date_completed TEXT,
     score INTEGER NOT NULL,
+    administrator INTEGER,
     FOREIGN KEY (user_id)
         REFERENCES Users(user_id),
     FOREIGN KEY (assessment_id)
-        REFERENCES Assessments(assessment_id)
+        REFERENCES Assessments(assessment_id),
+    FOREIGN KEY (administrator)
+        REFERENCES Users(user_id)
 );
 
 CREATE TABLE IF NOT EXISTS User_competencies (
