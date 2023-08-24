@@ -254,6 +254,23 @@ def print_modify_assessment_results():
     print('    (E)dit Assessment Result')
     cprint('    (D)elete Assessment Result\n\n', 'red')
 
+
+'''Error Handeling'''
+
+def is_numeric(value):
+    if not value.isnumeric():
+        cprint('\n\nInvalid input. Try again.', 'red')
+        wait_for_keypress()
+        return True
+
+
+def does_record_exist(value, table):
+    row = cursor.execute(find_query(f'Get {table}:'), (value,)).fetchone()
+    if not row:
+        cprint('\n\nNo assessment with this ID exists.', 'red')
+        wait_for_keypress()
+        return True
+
 '''For Testing'''
 
 def get_raw_string():

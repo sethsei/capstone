@@ -434,12 +434,16 @@ class User():
         rows = cursor.execute(ct.find_query('View User Assessment Results:'), (self.user_id,)).fetchall()
 
         ct.clear()
-        cprint(f'\n\n{"Assessment History":^70}', 'light_grey', attrs=['bold'])
-        print('-'*70)
-        cprint(f'\n{"Assessment":36}{"Date Completed":23}{"Score":11}', 'light_grey', attrs=['bold'])
-        print(f'{"-"*33:36}{"-"*20:23}{"-"*11:11}')
+        cprint(f'\n\n{"Assessment History":^90}', 'light_grey', attrs=['bold'])
+        print('-'*90)
+        cprint(f'\n{"Assessment":36}{"Date Completed":17}{"Score":8}{"Administrator":29}', 'light_grey', attrs=['bold'])
+        print(f'{"-"*33:36}{"-"*14:17}{"-"*5:8}{"-"*29:29}')
         for row in rows:
-            print(f'{row[0]:36}{row[1]:23}{row[2]:11}')
+            admin = f'{row[3]} {row[4]}'
+            if len(admin) == 1:
+                admin = 'N/A'
+
+            print(f'{row[0]:36}{row[1]:17}{row[2]:5}   {admin:29}')
 
         if logged_in.user_type == 1 and c == 0:
             modify_assessment_result()
@@ -778,16 +782,19 @@ def get_competency():
 
 '''View All Records'''
 
-def view_users(c=0, fsearch=None, lsearch=None):
+def view_users(c=0, fsearch=None, lsearch=None, m=False):
     while True:
-        if not fsearch and not lsearch:
-            rows = cursor.execute(ct.find_query('View Users:')).fetchall()
+        if m:
+            rows = cursor.execute(ct.find_query('View Managers:')).fetchall()
 
         elif fsearch:
             rows = cursor.execute(ct.find_query('Search Users First Name:'), (fsearch,)).fetchall()
         
         elif lsearch:
             rows = cursor.execute(ct.find_query('Search Users Last Name'), (lsearch,)).fetchall()
+        
+        else:
+            rows = cursor.execute(ct.find_query('View Users:')).fetchall()
         
         ct.clear()
         cprint(f'\n\n{"User Records":^172}', 'light_grey', attrs=['bold'])
@@ -928,7 +935,7 @@ def add_user():
     print(f'\nPlease input the {ph}:{" "*3}', end='')
     phone = input()
 
-    e = colored('Email', 'yellow', attrs=['bold'])
+    e = colored('Email', 'light_yellow', attrs=['bold'])
     print(f'\nPlease input the {e}:{" "*10}', end='')
     email = input()
 
@@ -959,41 +966,29 @@ def add_assessment():
 def add_assessment_result():
     uid = colored('User ID', 'light_yellow', attrs=['bold'])
     aid = colored('Assessment ID', 'light_yellow', attrs=['bold'])
-    dc = colored('Date Completed', 'white', attrs=['bold'])
+    dc = colored('Date Completed', 'light_yellow', attrs=['bold'])
     s = colored('Score', 'light_yellow', attrs=['bold'])
+    a = colored('Administrator', 'light_yellow', attrs=['bold'])
 
-    view_users(1)
-
+    view_users(c=1)
     print(f'\n\nPlease input the {uid}:{" "*10}', end='')
     user_id = input()
-    if not user_id.isnumeric():
-        cprint('\n\nInvalid input. Try again.')
-        ct.wait_for_keypress()
+    if ct.is_numeric(user_id):
         return
     
-    row = cursor.execute(ct.find_query('Get User:'), (user_id,)).fetchone()
-    if not row:
-        cprint('\n\nNo user with this ID exists.', 'red')
-        ct.wait_for_keypress()
+    if ct.does_record_exist(user_id, 'User'):
         return
 
-    view_assessments(1)
-
+    view_assessments(c=1)
     print(f'\n\nPlease input the {uid}:{" "*10}{user_id}')
     print(f'\n\nPlease input the {aid}:{" "*4}', end='')
     assessment_id = input()
-    if not assessment_id.isnumeric():
-        cprint('\n\nInvalid input. Try again.')
-        ct.wait_for_keypress()
-        return
-
-    row = cursor.execute(ct.find_query('Get Assessment:'), (assessment_id,)).fetchone()
-    if not row:
-        cprint('\n\nNo assessment with this ID exists.', 'red')
-        ct.wait_for_keypress()
-        return
-
     ct.clear()
+    if ct.is_numeric(assessment_id):
+        return
+
+    if ct.does_record_exist(assessment_id, 'Assessment'):
+        return
 
     print(f'\n\nPlease input the {uid}:{" "*10}{user_id}')
     print(f'\n\nPlease input the {aid}:{" "*4}{assessment_id}')
@@ -1002,12 +997,23 @@ def add_assessment_result():
 
     print(f'\n\nPlease input the {s}:{" "*12}', end='')
     score = input()
-    if not score.isnumeric():
-        cprint('\n\nInvalid input. Try again.')
-        ct.wait_for_keypress()
+    ct.clear()
+    if ct.is_numeric(score):
+        return
+    
+    view_users(c=1, m=True)
+    print(f'\n\nPlease input the {uid}:{" "*10}{user_id}')
+    print(f'\n\nPlease input the {aid}:{" "*4}{assessment_id}')
+    print(f'\n\nPlease input the {dc}:{" "*3}{date_completed}')
+    print(f'\n\nPlease input the {uid} of the {a}:{" "*3}', end='')
+    administrator = input()
+    if ct.is_numeric(administrator):
+        return
+    
+    if ct.does_record_exist(administrator, 'User'):
         return
 
-    cursor.execute(ct.find_query('Add Assessment Result:'), (user_id, assessment_id, date_completed, score))
+    cursor.execute(ct.find_query('Add Assessment Result:'), (user_id, assessment_id, date_completed, score, administrator))
     connection.commit()
 
     cprint('\n\n--- Assessment Result Added ---', 'light_green', attrs=['bold'])
@@ -1055,7 +1061,7 @@ def add_competency():
 def assign_assessment(competency_id):
     view_assessments(1)
 
-    aid = colored('Assessment ID', 'white', attrs=['bold'])
+    aid = colored('Assessment ID', 'light_yellow', attrs=['bold'])
     print(f'\n\nPlease input the {aid}:{" "*3}', end='')
     assessment_id = input().upper()
     
@@ -1089,22 +1095,22 @@ def modify_assessment_result():
         print(f'Please enter the listed {n} of the assessment:  ', end='')
         name = input().title()
 
-        print(f'\nPlease enter the {s} you want to edit:         ', end='')
+        print(f'\nPlease enter the {s} you want to edit:{" "*9}', end='')
         score = input()
         if not score.isnumeric():
             cprint('\n\nInvalid input. Try again.', 'red')
             ct.wait_for_keypress()
             return
         
-        print(f'\nPlease enter the new {s}:                      ', end='')
+        print(f'\nPlease enter the new {s}:{" "*22}', end='')
         new_score = input()
         if not new_score.isnumeric():
             cprint('\n\nInvalid input. Try again.', 'red')
             ct.wait_for_keypress()
             return
 
-        assessment_id = cursor.execute(ct.find_query('Get Assessment ID:'), (f'%{name}%',)).fetchone()
-        cursor.execute(ct.find_query('Change Assessment Result:'), (int(new_score), current_user.user_id, assessment_id[0], int(score)))
+        assessment_id = ct.isolate_value(cursor.execute(ct.find_query('Get Assessment ID:'), (f'%{name}%',)).fetchone())
+        cursor.execute(ct.find_query('Change Assessment Result:'), (int(new_score), current_user.user_id, assessment_id, int(score)))
         connection.commit()
 
         cprint('\n\n--- Assessment Result Updated ---', 'light_green', attrs=['bold'])
@@ -1117,15 +1123,15 @@ def modify_assessment_result():
         print(f'Please enter the listed {n} of the assessment:  ', end='')
         name = input().title()
 
-        print(f'\nPlease enter the {s} you want to delete:       ', end='')
+        print(f'\nPlease enter the {s} you want to delete:{" "*7}', end='')
         score = input()
         if not score.isnumeric():
             cprint('\n\nInvalid input. Try again.', 'red')
             ct.wait_for_keypress()
             return
 
-        assessment_id = cursor.execute(ct.find_query('Get Assessment ID:'), (f'%{name}%',)).fetchone()
-        cursor.execute(ct.find_query('Delete Assessment Result:'), (current_user.user_id, assessment_id[0], int(score)))
+        assessment_id = ct.isolate_value(cursor.execute(ct.find_query('Get Assessment ID:'), (f'%{name}%',)).fetchone())
+        cursor.execute(ct.find_query('Delete Assessment Result:'), (current_user.user_id, assessment_id, int(score)))
         connection.commit()
 
         cprint('\n\n--- Assessment Result Deleted ---', 'light_red', attrs=['bold'])

@@ -10,8 +10,8 @@ INSERT INTO Assessments (name, date_created)
 VALUES(?, ?);
 
 Add Assessment Result:
-INSERT INTO Assessment_results (user_id, assessment_id, date_completed, score)
-VALUES(?, ?, ?, ?);
+INSERT INTO Assessment_results (user_id, assessment_id, date_completed, score, administrator)
+VALUES(?, ?, ?, ?, ?);
 
 Add Competency:
 INSERT INTO Competencies (name, date_created)
@@ -90,6 +90,11 @@ SELECT *
 FROM Users
 ORDER BY user_type ASC;
 
+View Managers:
+SELECT *
+FROM Users
+WHERE user_type=1;
+
 Search Users First Name:
 SELECT *
 FROM Users
@@ -116,10 +121,12 @@ SELECT *
 FROM Competencies;
 
 View User Assessment Results:
-SELECT a.name, ar.date_completed, ar.score
+SELECT a.name, ar.date_completed, ar.score, u.first_name, u.last_name
 FROM Assessment_results AS ar
 INNER JOIN Assessments AS a
     ON ar.assessment_id = a.assessment_id
+INNER JOIN Users AS u
+    ON ar.administrator = u.user_id
 WHERE ar.user_id=?
 ORDER BY ar.assessment_id ASC, ar.score DESC;
 
