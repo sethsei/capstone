@@ -58,10 +58,25 @@ UPDATE Users
 SET user_type=1
 WHERE user_id=?;
 
+Change Assessment Name:
+UPDATE Assessments
+SET name=?
+WHERE assessment_id=?;
+
 Assign Assessment to Competency:
 UPDATE Competencies
 SET assessment_id=?
 WHERE competency_id=?;
+
+Change Competency Name:
+UPDATE Competencies
+SET name=?
+WHERE competency_id=?;
+
+Change Assessment Result:
+UPDATE Assessment_results
+SET score=?
+WHERE user_id=? AND assessment_id=? AND score=?;
 
 Update Competency Score:
 UPDATE User_competencies
@@ -87,6 +102,11 @@ FROM Users
 WHERE last_name LIKE ?
 ORDER BY user_type ASC;
 
+View Assessment:
+SELECT *
+FROM Assessments
+WHERE assessment_id=?;
+
 View Assessments:
 SELECT *
 FROM Assessments;
@@ -103,6 +123,8 @@ INNER JOIN Assessments AS a
 WHERE ar.user_id=?
 ORDER BY ar.assessment_id ASC, ar.score DESC;
 
+--- REPORTS ---
+
 View User Competencies:
 SELECT c.name, uc.competency_score
 FROM User_competencies AS uc
@@ -111,12 +133,15 @@ INNER JOIN Competencies AS c
 WHERE uc.user_id=?
 ORDER BY uc.competency_id ASC;
 
---- GET DATA ---
+All User Competencies:
+SELECT u.first_name, u.last_name, uc.competency_score
+FROM User_competencies AS uc
+INNER JOIN Users
+    ON uc.user_id = u.user_id
+WHERE uc.competency_id=?
+ORDER BY uc.competency_score DESC;
 
-Get User ID:
-SELECT user_id
-FROM Users
-ORDER BY user_id DESC;
+--- GET DATA ---
 
 Get User:
 SELECT *
@@ -124,22 +149,33 @@ FROM Users
 WHERE user_id=?
 LIMIT 1;
 
+Get User ID:
+SELECT user_id
+FROM Users
+ORDER BY user_id DESC;
+
 Get Assessment:
 SELECT *
 FROM Assessments
 WHERE assessment_id=?
 LIMIT 1;
 
-Get Competency:
-SELECT *
-FROM Competencies
-WHERE competency_id=?
-LIMIT 1;
-
 Get Assessment Name:
 SELECT name
 FROM Assessments
 WHERE assessment_id=?
+LIMIT 1;
+
+Get Assessment ID:
+SELECT assessment_id
+FROM Assessments
+WHERE name LIKE ?
+LIMIT 1;
+
+Get Competency:
+SELECT *
+FROM Competencies
+WHERE competency_id=?
 LIMIT 1;
 
 Get Competency ID:
@@ -185,6 +221,10 @@ Update Status:
 UPDATE Users
 SET active=?
 WHERE user_id=?;
+
+Delete Assessment Result:
+DELETE FROM Assessment_results
+WHERE user_id=? AND assessment_id=? AND score=?;
 
 
 ___END___

@@ -228,6 +228,12 @@ def print_search_menu():
     cprint('  (V)iew Menu\n\n', 'light_blue')
 
 
+def print_modify_assessment_results():
+    e = colored('EXIT', 'light_blue', attrs=['bold'])
+    print(f'\n\n\n{"-"*70}\nIf you would like to make any changes, please choose an option below,\nOr type <{e}> to return to user info\n{"-"*70}\n')
+    print('    (E)dit Assessment Result')
+    cprint('    (D)elete Assessment Result\n\n', 'red')
+
 '''For Testing'''
 
 def get_raw_string():
