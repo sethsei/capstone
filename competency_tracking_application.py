@@ -638,30 +638,22 @@ def get_user():
     if user_input == 'EXIT':
         return 'EXIT'
     
-    elif user_input.isnumeric():
-        row = cursor.execute(ct.find_query('Get User:'), (user_input,)).fetchone()
-
-        if not row:
-            cprint('\n\nNo user with this ID exists.', 'red')
-            ct.wait_for_keypress()
-            return
-
-        global current_user
-        current_user = User(row[1], row[2], row[3], row[4], row[8], user_id=row[0], password=row[5], user_type=row[9])
-        
-        global logged_in
-        if current_user.user_type == 1 and current_user.user_id != logged_in.user_id:
-            cprint('\n\nYou cannot make edits to this user.', 'red')
-            ct.wait_for_keypress()
-            current_user = logged_in
-            return
-
-        logged_in.print_info()
-
-    else:
-        cprint('\n\nInvalid input. Try again.', 'red')
-        ct.wait_for_keypress()
+    if ct.not_numeric(user_input) or ct.not_record_exists(user_input, 'User'):
         return
+    
+    row = cursor.execute(ct.find_query('Get User:'), (user_input,)).fetchone()
+
+    global current_user
+    current_user = User(row[1], row[2], row[3], row[4], row[8], user_id=row[0], password=row[5], user_type=row[9])
+    
+    global logged_in
+    if current_user.user_type == 1 and current_user.user_id != logged_in.user_id:
+        cprint('\n\nYou cannot make edits to this user.', 'red')
+        ct.wait_for_keypress()
+        current_user = logged_in
+        return
+
+    logged_in.print_info()
 
 
 def get_assessment():
@@ -674,28 +666,20 @@ def get_assessment():
     if user_input == 'EXIT':
         return 'EXIT'
     
-    elif not user_input.isnumeric(): 
-        cprint('\n\nInvalid input. Try again.', 'red')
-        ct.wait_for_keypress()
+    if ct.not_numeric(user_input) or ct.not_record_exists(user_input, 'Assessment'):
         return
     
-    else:
-        row = cursor.execute(ct.find_query('Get Assessment:'), (user_input,)).fetchone()
+    row = cursor.execute(ct.find_query('Get Assessment:'), (user_input,)).fetchone()
 
-        if not row:
-            cprint('\n\nNo assessment with this ID exists.', 'red')
-            ct.wait_for_keypress()
-            return
+    cid = colored(f'{"Assessment ID:":20}', 'white', attrs=['bold'])
+    n = colored(f'{"Name:":20}', 'white', attrs=['bold'])
+    dc = colored(f'{"Date Created:":20}', 'white', attrs=['bold'])
 
-        cid = colored(f'{"Assessment ID:":20}', 'white', attrs=['bold'])
-        n = colored(f'{"Name:":20}', 'white', attrs=['bold'])
-        dc = colored(f'{"Date Created:":20}', 'white', attrs=['bold'])
-
-        cprint(f'\n\n{"Assessment Information":^70}', 'white', attrs=['bold'])
-        cprint('-'*70, 'light_grey')
-        cprint(f'{cid}{row[0]:>50}')
-        cprint(f'{n}{row[1]:>50}')
-        cprint(f'{dc}{row[2]:>50}')
+    cprint(f'\n\n{"Assessment Information":^70}', 'white', attrs=['bold'])
+    cprint('-'*70, 'light_grey')
+    cprint(f'{cid}{row[0]:>50}')
+    cprint(f'{n}{row[1]:>50}')
+    cprint(f'{dc}{row[2]:>50}')
 
     e = colored('EXIT', 'light_blue', attrs=['bold'])
     print(f'\n\n\n{"-"*70}\nIf you would like to change a detail please select an option below,\nor type <{e}> to return to the menu\n{"-"*70}\n')
@@ -722,34 +706,24 @@ def get_competency():
     if user_input == 'EXIT':
         return 'EXIT'
     
-    elif not user_input.isnumeric(): 
-        cprint('\n\nInvalid input. Try again.', 'red')
-        ct.wait_for_keypress()
+    if ct.not_numeric(user_input) or ct.not_record_exists(user_input, 'Competency'):
         return
     
-    else:
-        row = cursor.execute(ct.find_query('Get Competency:'), (user_input,)).fetchone()
+    row = cursor.execute(ct.find_query('Get Competency:'), (user_input,)).fetchone()
+    
+    assessment = ct.convert_assessment_id(row[3])
+    cid = colored(f'{"Competency ID:":20}', 'white', attrs=['bold'])
+    n = colored(f'{"Name:":20}', 'white', attrs=['bold'])
+    dc = colored(f'{"Date Created:":20}', 'white', attrs=['bold'])
+    aa = colored(f'{"Assigned Assessment:":20}', 'white', attrs=['bold'])
 
-        if not row:
-            cprint('\n\nNo competency with this ID exists.', 'red')
-            ct.wait_for_keypress()
-            return
-        
-        assessment = ct.convert_assessment_id(row[3])
+    cprint(f'\n\n{"Competency Information":^70}', 'white', attrs=['bold'])
+    cprint('-'*70, 'light_grey')
+    cprint(f'{cid}{row[0]:>50}')
+    cprint(f'{n}{row[1]:>50}')
+    cprint(f'{dc}{row[2]:>50}')
+    cprint(f'{aa}{assessment:>50}')
 
-        cid = colored(f'{"Competency ID:":20}', 'white', attrs=['bold'])
-        n = colored(f'{"Name:":20}', 'white', attrs=['bold'])
-        dc = colored(f'{"Date Created:":20}', 'white', attrs=['bold'])
-        aa = colored(f'{"Assigned Assessment:":20}', 'white', attrs=['bold'])
-
-        cprint(f'\n\n{"Competency Information":^70}', 'white', attrs=['bold'])
-        cprint('-'*70, 'light_grey')
-        cprint(f'{cid}{row[0]:>50}')
-        cprint(f'{n}{row[1]:>50}')
-        cprint(f'{dc}{row[2]:>50}')
-        cprint(f'{aa}{assessment:>50}')
-
-    e = colored('EXIT', 'light_blue', attrs=['bold'])
     print(f'\n\n\n{"-"*70}\nIf you would like to change a detail please select an option below,\nor type <{e}> to return to the menu\n{"-"*70}\n')
     print('    (N)ame')
     print('    (A)ssessment ID\n\n')
@@ -843,10 +817,8 @@ def view_assessments(c=0, specific=0):
             if assessment_id == 'EXIT':
                 return
 
-            if not assessment_id.isnumeric():
-                cprint('\n\nInvalid input. Try again.', 'red')
-                ct.wait_for_keypress()
-                continue
+            if ct.not_numeric(assessment_id) or ct.not_record_exists(assessment_id, 'Assessment'):
+                return
 
             else:
                 assessment_id = int(assessment_id)
@@ -973,10 +945,7 @@ def add_assessment_result():
     view_users(c=1)
     print(f'\n\nPlease input the {uid}:{" "*10}', end='')
     user_id = input()
-    if ct.is_numeric(user_id):
-        return
-    
-    if ct.does_record_exist(user_id, 'User'):
+    if ct.not_numeric(user_id) or ct.not_record_exists(user_id, 'User'):
         return
 
     view_assessments(c=1)
@@ -984,10 +953,7 @@ def add_assessment_result():
     print(f'\n\nPlease input the {aid}:{" "*4}', end='')
     assessment_id = input()
     ct.clear()
-    if ct.is_numeric(assessment_id):
-        return
-
-    if ct.does_record_exist(assessment_id, 'Assessment'):
+    if ct.not_numeric(assessment_id) or ct.not_record_exists(assessment_id, 'Assessment'):
         return
 
     print(f'\n\nPlease input the {uid}:{" "*10}{user_id}')
@@ -998,7 +964,7 @@ def add_assessment_result():
     print(f'\n\nPlease input the {s}:{" "*12}', end='')
     score = input()
     ct.clear()
-    if ct.is_numeric(score):
+    if ct.not_numeric(score):
         return
     
     view_users(c=1, m=True)
@@ -1007,10 +973,7 @@ def add_assessment_result():
     print(f'\n\nPlease input the {dc}:{" "*3}{date_completed}')
     print(f'\n\nPlease input the {uid} of the {a}:{" "*3}', end='')
     administrator = input()
-    if ct.is_numeric(administrator):
-        return
-    
-    if ct.does_record_exist(administrator, 'User'):
+    if ct.not_numeric(administrator) or ct.not_record_exists(administrator, 'User'):
         return
 
     cursor.execute(ct.find_query('Add Assessment Result:'), (user_id, assessment_id, date_completed, score, administrator))
@@ -1035,13 +998,10 @@ def add_competency():
     print(f'\n\nPlease input the {n} of the competency:{" "*12}{name}')
     aid = colored('Assessment ID', 'white', attrs=['bold'])
     print(f'\n\nPlease input the {aid} (\'Enter\' to skip):{" "*3}', end='')
-    assessment_id = input().upper()
+    assessment_id = input()
     ct.clear()
 
-    row = cursor.execute(ct.find_query('Get Assessment:'), (assessment_id,)).fetchone()
-    if not row:
-        cprint('\n\nNo assessment with this ID exists.', 'red')
-        ct.wait_for_keypress()
+    if ct.not_numeric(assessment_id) or ct.not_record_exists(assessment_id, 'Assessment'):
         return
 
     print(f'\n\nPlease input the {n} of the competency:{" "*12}{name}')
@@ -1049,8 +1009,8 @@ def add_competency():
     if assessment_id:
         print(f'\n\nPlease input the {aid} (\'Enter\' to skip):{" "*3}{assessment_id}')
 
-        competency_id = cursor.execute(ct.find_query('Get Competency ID:'), (name,)).fetchone()
-        cursor.execute(ct.find_query('Assign Assessment to Competency:'), (assessment_id, competency_id[0]))
+        competency_id = ct.isolate_value(cursor.execute(ct.find_query('Get Competency ID:'), (name,)).fetchone())
+        cursor.execute(ct.find_query('Assign Assessment to Competency:'), (assessment_id, competency_id))
         connection.commit()
 
     cprint('\n\n--- Competency Added ---', 'light_green', attrs=['bold'])
@@ -1060,14 +1020,10 @@ def add_competency():
 
 def assign_assessment(competency_id):
     view_assessments(1)
-
     aid = colored('Assessment ID', 'light_yellow', attrs=['bold'])
     print(f'\n\nPlease input the {aid}:{" "*3}', end='')
-    assessment_id = input().upper()
-    
-    if not assessment_id.isnumeric(): 
-        cprint('\n\nInvalid input. Try again.', 'red')
-        ct.wait_for_keypress()
+    assessment_id = input()
+    if ct.not_numeric(assessment_id) or ct.not_record_exists(assessment_id, 'Assessment'):
         return
     
     else:
@@ -1097,16 +1053,12 @@ def modify_assessment_result():
 
         print(f'\nPlease enter the {s} you want to edit:{" "*9}', end='')
         score = input()
-        if not score.isnumeric():
-            cprint('\n\nInvalid input. Try again.', 'red')
-            ct.wait_for_keypress()
+        if ct.not_numeric(score):
             return
         
         print(f'\nPlease enter the new {s}:{" "*22}', end='')
         new_score = input()
-        if not new_score.isnumeric():
-            cprint('\n\nInvalid input. Try again.', 'red')
-            ct.wait_for_keypress()
+        if ct.not_numeric(new_score):
             return
 
         assessment_id = ct.isolate_value(cursor.execute(ct.find_query('Get Assessment ID:'), (f'%{name}%',)).fetchone())
@@ -1125,9 +1077,7 @@ def modify_assessment_result():
 
         print(f'\nPlease enter the {s} you want to delete:{" "*7}', end='')
         score = input()
-        if not score.isnumeric():
-            cprint('\n\nInvalid input. Try again.', 'red')
-            ct.wait_for_keypress()
+        if ct.not_numeric(score):
             return
 
         assessment_id = ct.isolate_value(cursor.execute(ct.find_query('Get Assessment ID:'), (f'%{name}%',)).fetchone())

@@ -257,19 +257,20 @@ def print_modify_assessment_results():
 
 '''Error Handeling'''
 
-def is_numeric(value):
+def not_numeric(value):
     if not value.isnumeric():
         cprint('\n\nInvalid input. Try again.', 'red')
         wait_for_keypress()
         return True
 
 
-def does_record_exist(value, table):
+def not_record_exists(value, table):
     row = cursor.execute(find_query(f'Get {table}:'), (value,)).fetchone()
     if not row:
         cprint('\n\nNo assessment with this ID exists.', 'red')
         wait_for_keypress()
         return True
+
 
 '''For Testing'''
 
