@@ -81,38 +81,38 @@ class User():
 
 
     def _update_user_competencies(self):
-        competencies = cursor.execute(ct.find_query('Get Competency IDs:')).fetchall()
+        competencies = ct.squash_competencies(cursor.execute(ct.find_query('Get Competency IDs:')).fetchall())
         if not competencies:
             return
 
-        user_competencies = cursor.execute(ct.find_query('Get User Competencies:'), (self.user_id,)).fetchall()
+        user_competencies = ct.squash_competencies(cursor.execute(ct.find_query('Get User Competencies:'), (self.user_id,)).fetchall())
         if not user_competencies:
-            user_competencies.append(tuple())
+            user_competencies = []
 
-        for c in competencies[0]:
-            score = cursor.execute(ct.find_query('Get Assessment Result:'), (c, self.user_id)).fetchone()
+        for c in competencies:
+            score = ct.isolate_value(cursor.execute(ct.find_query('Get Assessment Result:'), (c, self.user_id)).fetchone())
+            
             if not score:
                 score = 0
-
+            
             else:
-                grades = {(0, 60): 1,
-                            (60, 70): 2,
-                            (70, 80): 3,
-                            (80, 90): 4,
-                            (90, 101): 5}
+                grades = {(0, 60): 0,
+                            (60, 70): 1,
+                            (70, 80): 2,
+                            (80, 90): 3,
+                            (90, 101): 4}
                 for g in grades.keys():
-                    if score[0] in range(g[0], g[1]):
+                    if score in range(g[0], g[1]):
                         score = grades[g]
 
-            if c not in user_competencies[0]:
+            if c not in user_competencies:
                 # assign non-existent scores with assessment result or 0
                 cursor.execute(ct.find_query('Assign Assessment Result:'), (self.user_id, c, score))
                 connection.commit()
 
-            elif c in user_competencies[0]:
+            elif c in user_competencies:
                 # update old scores
-                # something not working here
-                old_score = cursor.execute(ct.find_query('Get Old Score:'), (self.user_id, c)).fetchone()
+                old_score = ct.isolate_value(cursor.execute(ct.find_query('Get Old Score:'), (self.user_id, c)).fetchone())
                 if score == old_score:
                     continue
 
@@ -452,14 +452,23 @@ class User():
 
     def print_competencies(self):
         rows = cursor.execute(ct.find_query('View User Competencies:'), (self.user_id,)).fetchall()
+        competency_scale = {0: 'No Competency - Needs training and direction',
+                            1: 'Basic Competency - Needs ongoing support',
+                            2: 'Intermediate Competency - Needs occasional support',
+                            3: 'Advanced Competency - Completes tasks independently',
+                            4: 'Expert Competency - Can effectively pass on this knowledge and can initiate optimizations'}
         
         ct.clear()
-        cprint(f'\n\n{"Competency Scores":^35}', 'light_grey', attrs=['bold'])
-        print('-'*35)
-        cprint(f'\n{"Competency":30}{"Score":5}', 'light_grey', attrs=['bold'])
-        print(f'{"-"*27:30}{"-"*5:5}')
-        for row in rows:
-            print(f'{row[0]:30}{row[1]:5}')
+        cprint(f'\n\n{"Competency Scores":^35}{" "*15}{"Competency Scale":^100}', 'light_grey', attrs=['bold'])
+        print(f'{"-"*35}{" "*15}{"-"*100}')
+        cprint(f'\n{"Competency":30}{"Score":20}{"Score":8}{"Reference":92}', 'light_grey', attrs=['bold'])
+        print(f'{"-"*27:30}{"-"*5:20}{"-"*5:8}{"-"*92:92}')
+        for i, row in enumerate(rows):
+            if i in competency_scale.keys():
+                print(f'{row[0]:30}{row[1]:5}{" "*15}{i:<8}{competency_scale[i]:92}')
+            
+            else:
+                print(f'{row[0]:30}{row[1]:5}')
 
         ct.wait_for_keypress()
         return

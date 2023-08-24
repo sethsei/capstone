@@ -77,6 +77,26 @@ def getpass(prompt, login=None, change=None, confirm=None):
             sys.stdout.flush()
 
 
+def squash_competencies(list_of_tuples):
+    squashed = []
+    try:
+        for t in list_of_tuples:
+            squashed.append(t[0])
+        
+        return squashed
+    
+    except:
+        return None
+
+
+def isolate_value(tup):
+    try:
+        return tup[0]
+    
+    except:
+        return None
+
+
 '''SQL Functions'''
 
 def find_query(title):
