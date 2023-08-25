@@ -477,6 +477,9 @@ class User():
             else:
                 print(f'{row[0]:30}{row[1]:5}')
 
+        if logged_in.user_type == 1 and False:
+            return 'Export PDF'
+        
         ct.wait_for_keypress()
         return
 
@@ -566,7 +569,7 @@ def create_database():
     connection.commit()
 
     # ensures at least one manager
-    pw = 'thejoker'.encode()
+    pw = 'password'.encode()
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(pw, salt).decode()
     Manager('John', 'Doe', '5555555555', 'johndoe@gmail.com', 'N/A', password=hashed)
@@ -617,8 +620,19 @@ def login():
 
 def import_data():
     # assessment results
-    # users (behind the scenes)
-    pass
+    with open('users.csv', 'r') as f:
+        users = csv.reader(f)
+        head = next(users)
+    
+        while True:
+            try:
+                row = next(users)
+                User(row[0], row[1], row[2], row[3], row[5], password=row[4])
+                if not row:
+                    break
+
+            except:
+                break
 
 
 '''Get Specific Records'''
@@ -766,15 +780,15 @@ def view_users(c=0, fsearch=None, lsearch=None, m=False):
             rows = cursor.execute(ct.find_query('View Users:')).fetchall()
         
         ct.clear()
-        cprint(f'\n\n{"User Records":^172}', 'light_grey', attrs=['bold'])
-        print('-'*172)
-        cprint(f'\n {"ID":7}{"First Name":23}{"Last Name":23}{"Phone":19}{"Email":33}{"Password":13}{"Status":13}{"Date Created":15}{"Hire Date":15}{"User Type":9}', 'light_grey', attrs=['bold'])
-        print(f' {"-"*4:7}{"-"*20:23}{"-"*20:23}{"-"*16:19}{"-"*30:33}{"-"*10:13}{"-"*10:13}{"-"*12:15}{"-"*12:15}{"-"*9:9}')
+        cprint(f'\n\n{"User Records":^182}', 'light_grey', attrs=['bold'])
+        print('-'*182)
+        cprint(f'\n {"ID":7}{"First Name":23}{"Last Name":23}{"Phone":19}{"Email":43}{"Password":13}{"Status":13}{"Date Created":15}{"Hire Date":15}{"User Type":9}', 'light_grey', attrs=['bold'])
+        print(f' {"-"*4:7}{"-"*20:23}{"-"*20:23}{"-"*16:19}{"-"*40:43}{"-"*10:13}{"-"*10:13}{"-"*12:15}{"-"*12:15}{"-"*9:9}')
         for row in rows:
             phone_num = ct.convert_phone_num(row[3])
             status = ct.convert_status(row[6])
             user_type = ct.convert_user_type(row[9])
-            print(f' {row[0]:>4}   {row[1]:23}{row[2]:23}{phone_num:19}{row[4]:33}{"*"*8:13}{status:13}{row[7]:15}{row[8]:15}{user_type:9}')
+            print(f' {row[0]:>4}   {row[1]:23}{row[2]:23}{phone_num:19}{row[4]:43}{"*"*8:13}{status:13}{row[7]:15}{row[8]:15}{user_type:9}')
         
         if c != 0:
             return
@@ -865,22 +879,28 @@ def all_competencies_reports():
         return
     
     while True:
-        head = cursor.execute(ct.find_query('Average All User Competencies:'), (competency_id,)).fetchall()
+        head = cursor.execute(ct.find_query('Average All User Competencies:'), (competency_id,)).fetchone()
         rows = cursor.execute(ct.find_query('All User Competencies:'), (competency_id,)).fetchall()
+        # context = {'competency': head[0],
+        #            'assessment': head[1],
+        #            'average': head[2]}
         
         ct.clear()
-        cprint(f'\n\n{" User Competencies For "+head[0][0]:^80}', 'light_grey', attrs=['bold'])
+        cprint(f'\n\n{" User Competencies For "+head[0]:^80}', 'light_grey', attrs=['bold'])
         print('-'*80)
-        print(f'Assessment:  {head[0][1]}')
-        print(f'Average Competency:  {head[0][2]}')
+        print(f'Assessment:  {head[1]}')
+        print(f'Average Competency:  {head[2]}')
         print('-'*80)
         cprint(f'\n{"Name":49}{"Exam Date":15}{"Competency Score":16}', 'light_grey', attrs=['bold'])
         print(f'{"-"*46:49}{"-"*12:15}{"-"*16:16}')
-        for row in rows:
+        for i, row in enumerate(rows):
             print(f'{row[0]+" "+row[1]:49}{row[2]:15}{row[3]:16}')
+            # context[f'name{i}': row[0]+" "+row[1]]
+            # context[f'date{i}': row[2]]
+            # context[f'score{i}': row[3]]
         
         if False:
-            return 'Export PDF'
+            ct.create_pdf(context, len(rows), rows, html='test.html')
         
         ct.wait_for_keypress()
         return

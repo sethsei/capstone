@@ -1,4 +1,4 @@
-import sqlite3, getch, sys, csv
+import sqlite3, getch, sys, csv, pdfkit, jinja2
 from os import system
 from datetime import date
 from termcolor import colored, cprint
@@ -95,6 +95,46 @@ def isolate_value(tup):
     
     except:
         return None
+
+
+def create_pdf_template(rows):
+    with open('html_temp.txt', 'r') as f:
+        html_start = f.read()
+
+    with open('all_competencies_pdf_template.html', 'w') as f:
+        f.write(html_start)
+
+    row = '''
+            <tr>
+                <td>{{name1}}</td>
+                <td>{{date1}}</td>
+                <td>{{score1}}</td>
+            </tr>
+    '''
+    for i in range(rows):
+        f.write(row)
+    
+    html_end = '''
+        </tbody>
+    </table>
+</body>
+    '''
+    f.write(html_end)
+
+
+def create_pdf(context, rows, html='all_competencies_pdf_template.html', output='reports/all_competencies.pdf'):
+
+    template_loader = jinja2.FileSystemLoader('./')
+    template_env = jinja2.Environment(loader=template_loader)
+
+    create_pdf_template(rows)
+    html_template = html
+    template = template_env.get_template(html_template)
+    output_text = template.render(context)
+
+    config = pdfkit.configuration(wkhtmltopdf='/usr/local/bin/wkhtmltopdf')
+    output_pdf = output
+    pdfkit.from_string(output_text, output_pdf, configuration=config)
 
 
 '''SQL Functions'''
@@ -301,4 +341,5 @@ def get_raw_string():
 '''Executes Test Code'''
 
 if __name__ == '__main__':
+    create_pdf('Ninja Turtles Bro', 'Ninja Turtle History', '2.0')
     pass
