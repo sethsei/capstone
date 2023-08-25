@@ -455,6 +455,8 @@ class User():
 
 
     def print_competencies(self):
+        # option to export as pdf (only for managers)
+        average = ct.isolate_value(cursor.execute(ct.find_query('Average User Competencies'), (self.user_id,)).fetchone())
         rows = cursor.execute(ct.find_query('View User Competencies:'), (self.user_id,)).fetchall()
         competency_scale = {0: 'No Competency - Needs training and direction',
                             1: 'Basic Competency - Needs ongoing support',
@@ -465,6 +467,7 @@ class User():
         ct.clear()
         cprint(f'\n\n{"Competency Scores":^35}{" "*15}{"Competency Scale":^100}', 'light_grey', attrs=['bold'])
         print(f'{"-"*35}{" "*15}{"-"*100}')
+        print(f'Average Competency:  {average}')
         cprint(f'\n{"Competency":30}{"Score":20}{"Score":8}{"Reference":92}', 'light_grey', attrs=['bold'])
         print(f'{"-"*27:30}{"-"*5:20}{"-"*5:8}{"-"*92:92}')
         for i, row in enumerate(rows):
@@ -479,7 +482,6 @@ class User():
 
 
 class Manager(User):
-    # view reports of users grouped by competency
     def __init__(self, first_name, last_name, phone, email, hire_date, user_id=0, password=None):
         super().__init__(first_name, last_name, phone, email, hire_date, user_id, password, user_type=1)
 
@@ -831,7 +833,7 @@ def view_assessments(c=0, specific=0):
             return
 
 
-def view_competencies():
+def view_competencies(c=0):
     while True:
         rows = cursor.execute(ct.find_query('View Competencies:')).fetchall()
         
@@ -843,6 +845,9 @@ def view_competencies():
         for row in rows:
             print(f'{row[0]:>4}   {row[1]:25}{row[2]:12}')
 
+        if c == 1:
+            return
+        
         if get_competency() == 'EXIT':
             return
         
@@ -850,10 +855,35 @@ def view_competencies():
             continue
 
 
-def view_reports():
-    # comptetency reports as pdf
-    # single user competencies as pdf
-    pass
+def all_competencies_reports():
+    # export as pdf
+    view_competencies(c=1)
+    cid = colored('Competency ID', attrs=['bold'])
+    print(f'\n\nPlease input {cid} to see a report of all users:  ', end='')
+    competency_id = input()
+    if ct.not_numeric(competency_id) or ct.not_record_exists(competency_id, 'Competency'):
+        return
+    
+    while True:
+        head = cursor.execute(ct.find_query('Average All User Competencies:'), (competency_id,)).fetchall()
+        rows = cursor.execute(ct.find_query('All User Competencies:'), (competency_id,)).fetchall()
+        
+        ct.clear()
+        cprint(f'\n\n{" User Competencies For "+head[0][0]:^80}', 'light_grey', attrs=['bold'])
+        print('-'*80)
+        print(f'Assessment:  {head[0][1]}')
+        print(f'Average Competency:  {head[0][2]}')
+        print('-'*80)
+        cprint(f'\n{"Name":49}{"Exam Date":15}{"Competency Score":16}', 'light_grey', attrs=['bold'])
+        print(f'{"-"*46:49}{"-"*12:15}{"-"*16:16}')
+        for row in rows:
+            print(f'{row[0]+" "+row[1]:49}{row[2]:15}{row[3]:16}')
+        
+        if False:
+            return 'Export PDF'
+        
+        ct.wait_for_keypress()
+        return
 
 
 def search_users():
@@ -1172,10 +1202,10 @@ def view_menu():
     while True:
         ct.print_view_menu()
         inputs = {'U': view_users,
-                  'A': view_assessments,
+                  'AS': view_assessments,
                   'C': view_competencies,
                   'S': search_users,
-                  'R': view_reports}
+                  'AL': all_competencies_reports}
         
         user_input = input().upper()
         ct.clear()

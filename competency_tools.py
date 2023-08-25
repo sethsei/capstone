@@ -249,10 +249,10 @@ def print_view_menu():
     cprint(f'\n\n{"View Menu":^26}', 'white', attrs=['bold'])
     print('-'*26)
     print('  (U)sers')
-    print('  (A)ssessments')
+    print('  (AS)sessments')
     print('  (C)ompetencies')
     print('  (S)earch Users')
-    print('  (R)eports')
+    print('  (AL)l Competencies Reports')
     cprint('  (M)ain Menu', 'light_blue')
     cprint('  (L)og Out\n\n', 'red')
 

@@ -132,6 +132,11 @@ ORDER BY ar.assessment_id ASC, ar.score DESC;
 
 --- REPORTS ---
 
+Average User Competencies:
+SELECT AVG(competency_score)
+FROM User_competencies
+WHERE user_id=?;
+
 View User Competencies:
 SELECT c.name, uc.competency_score
 FROM User_competencies AS uc
@@ -140,12 +145,30 @@ INNER JOIN Competencies AS c
 WHERE uc.user_id=?
 ORDER BY uc.competency_id ASC;
 
-All User Competencies:
-SELECT u.first_name, u.last_name, uc.competency_score
+Average All User Competencies:
+SELECT c.name, a.name, AVG(uc.competency_score)
 FROM User_competencies AS uc
-INNER JOIN Users
+INNER JOIN Users AS u
     ON uc.user_id = u.user_id
-WHERE uc.competency_id=?
+INNER JOIN Competencies AS c
+    ON uc.competency_id = c.competency_id
+LEFT JOIN Assessments AS a
+    ON c.assessment_id = a.assessment_id
+WHERE uc.competency_id=? AND NOT u.user_type=1;
+
+All User Competencies:
+SELECT u.first_name, u.last_name, ar.date_completed, uc.competency_score
+FROM User_competencies AS uc
+INNER JOIN Users AS u
+    ON uc.user_id = u.user_id
+INNER JOIN Competencies AS c
+    ON uc.competency_id = c.competency_id
+LEFT JOIN Assessments AS a
+    ON c.assessment_id = a.assessment_id
+LEFT JOIN Assessment_results AS ar
+    ON c.assessment_id = ar.assessment_id
+WHERE uc.competency_id=? AND NOT u.user_type=1
+GROUP BY uc.user_id
 ORDER BY uc.competency_score DESC;
 
 --- GET DATA ---
@@ -189,6 +212,12 @@ Get Competency ID:
 SELECT competency_id
 FROM Competencies
 WHERE name=?
+LIMIT 1;
+
+Get Competency Name:
+SELEC name
+FROM Competencies
+WHERE competency_id=?
 LIMIT 1;
 
 Get Competency IDs:
