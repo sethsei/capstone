@@ -1,6 +1,6 @@
-# INSTRUCTIONS FOR USING THE COMPETENCY TRACKING APPLICATION
+## INSTRUCTIONS FOR USING THE COMPETENCY TRACKING APPLICATION
 
-## Modules needed to install before running:
+### Modules needed to install before running:
 - sqlite3
 - bcrypt
 - csv
@@ -12,6 +12,10 @@
 - wkhtmltopdf
 - pdfkit
 - jinja2
+
+**Manager Login:**\
+&nbsp;&nbsp;&nbsp;&nbsp;Username: johndoe@gmail.com\
+&nbsp;&nbsp;&nbsp;&nbsp;Password: password
 
 As for using the program, most instructions are given along the way.
 
