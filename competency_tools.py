@@ -1,10 +1,16 @@
-import sqlite3, getch, sys, csv, pdfkit, jinja2
+import sqlite3
+import getch
+import sys
+import csv
+import pdfkit
+import jinja2
 from os import system
 from datetime import date
 from termcolor import colored, cprint
 
 
 '''General Functions'''
+
 
 def initialize():
     global database
@@ -42,14 +48,14 @@ def getpass(prompt, login=None, change=None, confirm=None):
     n = '\n\nInput New Password:    '
     if change:
         change_prompt = n + '*'*change + '\n'
-    
+
     else:
         change_prompt = ''
 
     p = '\n\nInput Password:    '
     if confirm:
         confirm_prompt = p + '*'*confirm + '\n'
-    
+
     else:
         confirm_prompt = ''
 
@@ -63,7 +69,7 @@ def getpass(prompt, login=None, change=None, confirm=None):
             sys.stdout.write('\n')
             sys.stdout.flush()
             return password
-        
+
         # backspace character for mac, other systems may be '\b'
         elif c == '\x7f':
             password = password[:-1:]
@@ -82,9 +88,9 @@ def squash_competencies(list_of_tuples):
     try:
         for t in list_of_tuples:
             squashed.append(t[0])
-        
+
         return squashed
-    
+
     except:
         return None
 
@@ -92,7 +98,7 @@ def squash_competencies(list_of_tuples):
 def isolate_value(tup):
     try:
         return tup[0]
-    
+
     except:
         return None
 
@@ -113,7 +119,7 @@ def create_pdf_template(rows):
     '''
     for i in range(rows):
         f.write(row)
-    
+
     html_end = '''
         </tbody>
     </table>
@@ -139,6 +145,7 @@ def create_pdf(context, rows, html='all_competencies_pdf_template.html', output=
 
 '''SQL Functions'''
 
+
 def find_query(title):
     found = False
     query = ''''''
@@ -148,12 +155,12 @@ def find_query(title):
 
             if line == '___END___':
                 return 'Query Not Found'
-            
+
             if found:
                 if line.strip().endswith(';'):
                     query += line.strip()
                     return query
-                
+
                 query += line
                 continue
 
@@ -165,9 +172,10 @@ def find_query(title):
 def export_data():
     with open('reports/users.csv', 'w') as f:
         writer = csv.writer(f)
-        writer.writerow(('user_id', 'first_name', 'last_name', 'phone', 'email', 'password', 'active', 'date_created', 'hire_date', 'user_type'))
+        writer.writerow(('user_id', 'first_name', 'last_name', 'phone', 'email',
+                        'password', 'active', 'date_created', 'hire_date', 'user_type'))
         writer.writerows(cursor.execute(find_query('CSV Users:')).fetchall())
-    
+
     with open('reports/assessments.csv', 'w') as f:
         writer = csv.writer(f)
         writer.writerow(('assessment_id', 'name', 'date_created'))
@@ -181,6 +189,7 @@ def export_data():
 
 '''Print Related Functions'''
 
+
 def convert_phone_num(phone):
     if len(str(phone)) == 10:
         phone_num = list(str(phone))
@@ -188,15 +197,15 @@ def convert_phone_num(phone):
         phone_num.insert(4, ') ')
         phone_num.insert(8, '-')
         return ''.join(phone_num)
-    
+
     else:
         return phone
-    
+
 
 def convert_user_type(user_type):
     if user_type == 0:
         return 'User'
-    
+
     else:
         return 'Manager'
 
@@ -207,7 +216,7 @@ def convert_status(status):
 
     else:
         return 'Inactive'
-    
+
 
 def convert_assessment_id(assessment_id):
     if not assessment_id:
@@ -219,6 +228,7 @@ def convert_assessment_id(assessment_id):
 
 
 '''Menus'''
+
 
 def u_change_values_menu():
     e = colored('EXIT', 'light_blue', attrs=['bold'])
@@ -315,6 +325,7 @@ def print_modify_assessment_results():
 
 '''Error Handeling'''
 
+
 def not_numeric(value):
     if not value.isnumeric():
         cprint('\n\nInvalid input. Try again.', 'red')
@@ -332,6 +343,7 @@ def not_record_exists(value, table):
 
 '''For Testing'''
 
+
 def get_raw_string():
     for i in range(10):
         c = getch.getch()
@@ -341,5 +353,4 @@ def get_raw_string():
 '''Executes Test Code'''
 
 if __name__ == '__main__':
-    create_pdf('Ninja Turtles Bro', 'Ninja Turtle History', '2.0')
     pass
